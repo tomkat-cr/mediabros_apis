@@ -1,0 +1,39 @@
+{
+  "name": "mediabros_apis",
+  "version": "1.0.0",
+  "description": "Mediabros APIs for currency and crypto exchange, OpenAI API, and Telegram messaging for APIs error reporting.",
+  "main": "src/index.py",
+  "scripts": {
+    "deactivate": "sh run.sh deactivate",
+    "pipfile": "sh run.sh pipfile",
+    "clean": "sh run.sh clean",
+    "test": "sh run.sh test",
+    "run:ngrok": "sh run.sh run_ngrok",
+    "run:cli": "sh run.sh run_module",
+    "run:dev": "sh run.sh run",
+    "run": "sh run.sh",
+    "deploy": "sh run.sh deploy_prod",
+    "rename_staging": "sh run.sh rename_staging"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomkat-cr/mediabros_apis.git"
+  },
+  "keywords": [
+    "python",
+    "api",
+    "python3",
+    "openai",
+    "telegramapi",
+    "fastapi"
+  ],
+  "author": "Carlos J. Ramirez",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tomkat-cr/mediabros_apis/issues"
+  },
+  "homepage": "https://github.com/tomkat-cr/mediabros_apis#readme",
+  "devDependencies": {
+    "ngrok": "^4.3.3"
+  }
+}

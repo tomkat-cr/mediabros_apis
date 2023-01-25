@@ -1,0 +1,16 @@
+{
+    "version": 2,
+    "outputDirectory": "src",
+    "builds": [
+        {
+            "src": "src/*.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "src/index.py"
+        }
+    ]
+}
