@@ -54,7 +54,7 @@ def openai_api_general(
         return response
     try:
         if openai_response.choices[0].text:
-            response['data'] = openai_response.choices[0].text
+            return openai_response.choices[0].text
         else:
             response['data'] = openai_response
             response['error'] = True
@@ -78,7 +78,7 @@ def openai_api_with_defaults(request):
     max_tokens = request.get('mt', '2048')
     return openai_api_general(
         question,
-        debug,
+        debug == '1',
         prompt_model,
         openai_model,
         temperature,
