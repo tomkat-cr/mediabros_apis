@@ -30,7 +30,7 @@ def openai_api_general(
 ):
     openai.api_key = settings.OPENAI_API_KEY
     response = get_api_standard_response()
-    if question == '':
+    if not question:
         response['error'] = True
         response['error_message'] = 'ERROR OAI-010:' + \
             'No question supplied'

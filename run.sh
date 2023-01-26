@@ -63,8 +63,10 @@ if [ "$1" = "run_ngrok" ]; then
 fi
 
 if [[ "$1" = "run_module" ]]; then
-    echo "Run module only..."
-    python index.py cli
+    # npm run run:cli .env /cop /debug otros strings
+    echo "Run module only as CLI..."
+    cd ..
+    python -m src.index cli $2 $3 $4 $5 $6 $7 $8 $9
     echo "Done..."
 fi
 

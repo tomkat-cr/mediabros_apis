@@ -5,16 +5,27 @@ from .currency_exchange_apis import usdcop, usdveb, veb_cop, crypto
 def request_processing(message):
     param_separated = message.split(" ")
     command = param_separated[0]
-    other_param = ''
+    param_separated.remove(command)
     debug = False
-    if len(param_separated) > 1:
-        if param_separated[1] == 'debug':
+    if len(param_separated) >= 1:
+        if param_separated[0] == '/debug':
             debug = True
-        else:
-            other_param = param_separated[1]
+            param_separated.remove('/debug')
+    other_param = ' '.join(param_separated)
+
+    print('request_processing')
+    print(f'command: {command}')
+    print(f'debug: {debug}')
+    print(f'other_param: {other_param}')
+
     if command == '/ai':
         request = dict()
-        request['question'] = other_param
+        request['q'] = other_param
+        return openai_api_with_defaults(request)
+    if command == '/codex':
+        request = dict()
+        request['q'] = other_param
+        request['m'] = 'code-davinci-002'
         return openai_api_with_defaults(request)
     if command == '/cop':
         return usdcop(debug)

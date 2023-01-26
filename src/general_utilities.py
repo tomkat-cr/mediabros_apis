@@ -18,4 +18,10 @@ def get_command_line_args():
         params['mode'] = sys.argv[1]
     if len(sys.argv) > 2:
         params['config_filename'] = sys.argv[2]
+    if len(sys.argv) > 3:
+        params['body'] = ' '.join(
+            [sys.argv[i] for i in range(3, len(sys.argv))]
+        )
+    print('get_command_line_args')
+    print(f'params: {str(params)}')
     return params

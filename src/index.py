@@ -1,20 +1,20 @@
+# index.py
+# Project: mediabros_apis
+# 2023-01-24 | CR
+#
 import logging
-
-# from typing import Union, Any
+from typing import Union  # , Any
 
 from fastapi import FastAPI, Request
 from a2wsgi import ASGIMiddleware
 
 from .openai_api import openai_api_with_defaults
-# from pydantic import BaseModel
-
-# from .whatsapp_webhook import whatsapp_webhook_get, whatsapp_webhook_post
-# from .whatsapp_send_message import send_whatsapp_message
-# from .whatsapp_send_message import send_whatsapp_template
+from pydantic import BaseModel
 
 from .date_utilities import get_formatted_date
 from .general_utilities import get_command_line_args
 from .currency_exchange_apis import crypto, usdcop, usdveb, veb_cop
+from .request_processing import request_processing
 
 
 logging.basicConfig(
@@ -24,15 +24,24 @@ logging.basicConfig(
 
 
 params = get_command_line_args()
-# if params['mode'] == 'cli':
-#   apiResponse = whatsapp_webhook_post(params.get('body'))
-#   print(apiResponse)
+if params['mode'] == 'cli':
+    apiResponse = request_processing(params.get('body', ''))
+    print(apiResponse)
 
 api = FastAPI()
 app = ASGIMiddleware(api)
 
 
 # EndPoints
+
+
+class Body(BaseModel):
+    q: Union[str, None] = None
+    debug: Union[int, None] = None
+    p: Union[str, None] = None
+    m: Union[str, None] = None
+    t: Union[str, None] = None
+    mt: Union[str, None] = None
 
 
 @api.get("/query_params/")
@@ -45,44 +54,15 @@ async def api_query_params(request: Request):
     return api_response
 
 
-# class Body(BaseModel):
-#     object: Union[str, None] = None
-#     entry: Union[Any, None] = None
-
-
-# @api.post("/webhook")
-# async def webhook_post(body: Body):
-#     print('---------')
-#     print(get_formatted_date())
-#     print(f'webhook_post: body = {str(body)}')
-#     api_response = whatsapp_webhook_post(body)
-#     print(f'webhook_post: api_response = {api_response}')
-#     return api_response
-
-
-# @api.get("/send_template")
-# def send_template(phone, template='hello_world'):
-#     print('---------')
-#     print(get_formatted_date())
-#     print('send_template')
-#     print(f'phone_number = {phone}')
-#     print(f'template = {template}')
-#     print('send_whatsapp_template - Begin...')
-#     api_response = send_whatsapp_template(phone, template)
-#     print('send_whatsapp_template - End...')
-#     print(api_response)
-#     return api_response
-
-
-# @api.get("/send_message")
-# def send_message(phone, message):
-#     print('---------')
-#     print(get_formatted_date())
-#     print('send_message')
-#     print(f'phone_number = {phone}')
-#     print(f'message = {message}')
-#     api_response = send_whatsapp_message(phone, message)
-#     return api_response
+@api.post("/ai")
+async def ai_post(body: Body):
+    print('---------')
+    print(get_formatted_date())
+    form_params = dict(body)
+    print(f'ai_post: body = {str(form_params)}')
+    api_response = openai_api_with_defaults(form_params)
+    print(f'ai_post: api_response = {api_response}')
+    return api_response
 
 
 @api.get("/ai")
@@ -92,6 +72,18 @@ async def ai_get(request: Request):
     print(f'ai_get: request = {request.query_params}')
     api_response = openai_api_with_defaults(request.query_params)
     print(f'ai_get: api_response = {api_response}')
+    return api_response
+
+
+@api.get("/codex")
+async def codex_get(request: Request):
+    print('---------')
+    print(get_formatted_date())
+    request_params = dict(request.query_params)
+    request_params['m'] = 'code-davinci-002'
+    print(f'codex_get: request = {request_params}')
+    api_response = openai_api_with_defaults(request_params)
+    print(f'codex_get: api_response = {api_response}')
     return api_response
 
 
@@ -163,3 +155,8 @@ def endpoint_crypto_plain(symbol: str):
 @api.get("/crypto/{symbol}/{debug}")
 def endpoint_crypto(symbol: str, debug: int):
     return crypto(symbol, 'usd', debug == 1)
+
+
+@api.get("/crypto/{symbol}/{currency}/{debug}")
+def endpoint_crypto_curr(symbol: str, currency: str, debug: int):
+    return crypto(symbol, currency, debug == 1)
