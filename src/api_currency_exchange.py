@@ -1,7 +1,7 @@
 import datetime
 import requests
-from .general_utilities import get_api_standard_response
-from .telegram_utilities import report_error_to_tg_group
+from .utility_general import get_api_standard_response
+from .utility_telegram import report_error_to_tg_group
 
 
 # ------------------------

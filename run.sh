@@ -31,6 +31,13 @@ if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" ]]; then
         pip install fastapi
         pip install a2wsgi
         pip install openai
+        pip install pymongo
+        pip install werkzeug
+        pip install "python-jose[cryptography]"
+        pip install "passlib[bcrypt]"
+        pip install wheel
+        pip install python-multipart
+        
         pip freeze > requirements.txt
     fi
 fi

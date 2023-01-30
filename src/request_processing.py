@@ -1,5 +1,5 @@
-from .openai_api import openai_api_with_defaults
-from .currency_exchange_apis import usdcop, usdveb, veb_cop, crypto
+from .api_openai import openai_api_with_defaults
+from .api_currency_exchange import usdcop, usdveb, veb_cop, crypto
 
 
 def request_processing(message):
