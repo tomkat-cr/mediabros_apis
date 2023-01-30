@@ -42,7 +42,7 @@ class UserInDB(User):
 
 def fetch_user_by_entryname(entry_name, entry_value, fields={}):
     resultset = get_default_db_resultset()
-    print(f'** DB ** fetch_user_by_entryname: {entry_name} {entry_value}')
+    # print(f'** DB ** fetch_user_by_entryname: {entry_name} {entry_value}')
     try:
         resultset['resultset'] = db.users.find_one(
             {entry_name: entry_value},
@@ -54,5 +54,5 @@ def fetch_user_by_entryname(entry_name, entry_value, fields={}):
             err, 'FUBEN1'
         )
         resultset['error'] = True
-    print(f'** DB ** fetch_user_by_entryname.resultset: {resultset}')
+    # print(f'** DB ** fetch_user_by_entryname.resultset: {resultset}')
     return resultset

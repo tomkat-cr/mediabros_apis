@@ -93,9 +93,9 @@ async def ai_post(
 ):
     log_endpoint_debug('/ai POST')
     form_params = dict(body)
-    print(f'ai_post: body = {str(form_params)}')
+    # print(f'ai_post: body = {str(form_params)}')
     api_response = openai_api_with_defaults(form_params)
-    print(f'ai_post: api_response = {api_response}')
+    # print(f'ai_post: api_response = {api_response}')
     return api_response
 
 
@@ -105,9 +105,9 @@ async def ai_get(
     current_user: User = Depends(get_current_active_user)
 ):
     log_endpoint_debug('/ai GET')
-    print(f'ai_get: request = {request.query_params}')
+    # print(f'ai_get: request = {request.query_params}')
     api_response = openai_api_with_defaults(request.query_params)
-    print(f'ai_get: api_response = {api_response}')
+    # print(f'ai_get: api_response = {api_response}')
     return api_response
 
 
@@ -119,9 +119,9 @@ async def codex_get(
     log_endpoint_debug('/codex')
     request_params = dict(request.query_params)
     request_params['m'] = 'code-davinci-002'
-    print(f'codex_get: request = {request_params}')
+    # print(f'codex_get: request = {request_params}')
     api_response = openai_api_with_defaults(request_params)
-    print(f'codex_get: api_response = {api_response}')
+    # print(f'codex_get: api_response = {api_response}')
     return api_response
 
 

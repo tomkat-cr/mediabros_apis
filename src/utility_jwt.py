@@ -56,15 +56,15 @@ def get_user_hashed_password(username: str):
 
 
 def authenticate_user(username: str, password: str):
-    print(f'authenticate_user.username: {username}, password: {password}')
+    # print(f'authenticate_user.username: {username}, password: {password}')
     try:
         user = get_user_hashed_password(username)
-        print(f'authenticate_user.user: {user}')
+        # print(f'authenticate_user.user: {user}')
         if not user:
             return False
         if not verify_password(password, user.hashed_password):
             return False
-        print('authenticate_user: PASO TODO OK')
+        # print('authenticate_user: ALL CLEAR OK')
         return user
     except Exception as err:
         log_warning(f'authenticate_user ERROR: {str(err)}')
@@ -123,7 +123,7 @@ async def get_current_active_user(
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
-    print(f'login_for_access_token.form_data = {form_data}')
+    # print(f'login_for_access_token.form_data = {form_data}')
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         print("ERROR on login: Incorrect username or password")
@@ -142,7 +142,7 @@ def login_for_access_token(
         response = {
             "access_token": access_token, "token_type": "bearer"
         }
-        print(f'login_for_access_token.response = {response}')
+        # print(f'login_for_access_token.response = {response}')
         return response
     except Exception as err:
         log_warning(f'login_for_access_token ERROR: {str(err)}')
