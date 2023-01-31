@@ -124,10 +124,10 @@ async def codex_get(
     return api_response
 
 
-@api.get("/usdcop")
-def endpoint_usdcop_plain():
-    log_endpoint_debug('/usdcop')
-    return usdcop(False)
+# @api.get("/usdcop")
+# def endpoint_usdcop_plain():
+#     log_endpoint_debug('/usdcop')
+#     return usdcop(False)
 
 
 @api.get("/usdcop/{debug}")
@@ -136,10 +136,10 @@ def endpoint_usdcop(debug: int):
     return usdcop(debug == 1)
 
 
-@api.get("/usdvef")
-def endpoint_usdvef_plain():
-    log_endpoint_debug('/usdvef')
-    return usdveb(False)
+# @api.get("/usdvef")
+# def endpoint_usdvef_plain():
+#     log_endpoint_debug('/usdvef')
+#     return usdveb(False)
 
 
 @api.get("/usdvef/{debug}")
@@ -148,10 +148,10 @@ def endpoint_usdvef(debug: int):
     return usdveb(debug == 1)
 
 
-@api.get("/copveb")
-def endpoint_copveb_plain():
-    log_endpoint_debug('/copveb')
-    return veb_cop('copveb', False)
+# @api.get("/copveb")
+# def endpoint_copveb_plain():
+#     log_endpoint_debug('/copveb')
+#     return veb_cop('copveb', False)
 
 
 @api.get("/copveb/{debug}")
@@ -160,10 +160,10 @@ def endpoint_copveb(debug: int):
     return veb_cop('copveb', debug == 1)
 
 
-@api.get("/vebcop")
-def endpoint_vebcop_plain():
-    log_endpoint_debug('/vebcop')
-    return veb_cop('vebcop', False)
+# @api.get("/vebcop")
+# def endpoint_vebcop_plain():
+#     log_endpoint_debug('/vebcop')
+#     return veb_cop('vebcop', False)
 
 
 @api.get("/vebcop/{debug}")
@@ -172,10 +172,10 @@ def endpoint_vebcop(debug: int):
     return veb_cop('vebcop', debug == 1)
 
 
-@api.get("/btc")
-def endpoint_btc_plain():
-    log_endpoint_debug('/btc')
-    return crypto('btc', 'usd', False)
+# @api.get("/btc")
+# def endpoint_btc_plain():
+#     log_endpoint_debug('/btc')
+#     return crypto('btc', 'usd', False)
 
 
 @api.get("/btc/{debug}")
@@ -184,10 +184,10 @@ def endpoint_btc(debug: int):
     return crypto('btc', 'usd', debug == 1)
 
 
-@api.get("/eth")
-def endpoint_eth_plain():
-    log_endpoint_debug('/eth')
-    return crypto('eth', 'usd', False)
+# @api.get("/eth")
+# def endpoint_eth_plain():
+#     log_endpoint_debug('/eth')
+#     return crypto('eth', 'usd', False)
 
 
 @api.get("/eth/{debug}")
@@ -196,16 +196,16 @@ def endpoint_eth(debug: int):
     return crypto('eth', 'usd', debug == 1)
 
 
-@api.get("/crypto/{symbol}")
-def endpoint_crypto_plain(symbol: str):
-    log_endpoint_debug(f'/crypto/{symbol}')
-    return crypto(symbol, 'usd', False)
+# @api.get("/crypto/{symbol}")
+# def endpoint_crypto_plain(symbol: str):
+#     log_endpoint_debug(f'/crypto/{symbol}')
+#     return crypto(symbol, 'usd', False)
 
 
-@api.get("/crypto/{symbol}/{debug}")
-def endpoint_crypto(symbol: str, debug: int):
-    log_endpoint_debug(f'/crypto/{symbol}/{debug}')
-    return crypto(symbol, 'usd', debug == 1)
+# @api.get("/crypto/{symbol}/{debug}")
+# def endpoint_crypto(symbol: str, debug: int):
+#     log_endpoint_debug(f'/crypto/{symbol}/{debug}')
+#     return crypto(symbol, 'usd', debug == 1)
 
 
 @api.get("/crypto/{symbol}/{currency}/{debug}")
