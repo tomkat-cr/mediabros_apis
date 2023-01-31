@@ -77,12 +77,12 @@ class Body(BaseModel):
     mt: Union[str, None] = None
 
 
-@api.get("/query_params/")
-async def api_query_params(request: Request):
-    log_endpoint_debug('/query_params')
-    api_response = request.query_params
-    print(api_response)
-    return api_response
+# @api.get("/query_params/")
+# async def api_query_params(request: Request):
+#     log_endpoint_debug('/query_params')
+#     api_response = request.query_params
+#     print(api_response)
+#     return api_response
 
 
 @api.post("/ai")
