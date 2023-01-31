@@ -46,11 +46,10 @@ async def login_for_access_token_endpoint(
     return login_for_access_token(form_data)
 
 
-# @api.get("/pget", response_model=UserInDB)
-@api.get("/pget")
-async def pget(p: str):
-    log_endpoint_debug('/pget')
-    return dict({'password_hashed': get_password_hash(p)})
+# @api.get("/pget")
+# async def pget(p: str):
+#     log_endpoint_debug('/pget')
+#     return dict({'password_hashed': get_password_hash(p)})
 
 
 # @api.get("/users/me/", response_model=User)
