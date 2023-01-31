@@ -3,7 +3,7 @@
     "outputDirectory": "src",
     "builds": [
         {
-            "src": "src/*.py",
+            "src": "src/index.py",
             "use": "@vercel/python"
         }
     ],
