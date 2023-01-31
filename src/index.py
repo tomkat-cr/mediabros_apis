@@ -53,10 +53,10 @@ async def pget(p: str):
     return dict({'password_hashed': get_password_hash(p)})
 
 
-@api.get("/users/me/", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    log_endpoint_debug('/users/me/')
-    return current_user
+# @api.get("/users/me/", response_model=User)
+# async def read_users_me(current_user: User = Depends(get_current_active_user)):
+#     log_endpoint_debug('/users/me/')
+#     return current_user
 
 
 # @app.get("/users/me/items/")
