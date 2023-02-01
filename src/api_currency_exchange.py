@@ -1,6 +1,6 @@
 import datetime
 import requests
-from .utility_general import get_api_standard_response
+from .utility_general import get_api_standard_response, log_warning
 from .utility_telegram import report_error_to_tg_group
 
 
@@ -226,7 +226,7 @@ def usdcop(debug):
 
     except Exception as err:
         response_message = f'ERROR in usdcop: {err}'
-        print(response_message)
+        log_warning(response_message)
     return response_message
 
 

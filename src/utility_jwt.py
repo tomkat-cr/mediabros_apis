@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from .model_users import fetch_user_by_entryname, User, UserInDB
 from .settings import settings
 from .utility_password import verify_password
-from .utility_general import log_warning
+from .utility_general import log_debug, log_warning
 
 
 class Token(BaseModel):
@@ -29,10 +29,10 @@ def get_user(username: str):
         fields = {'_id': 0}
         resultset = fetch_user_by_entryname('username', username, fields)
         if not resultset['error'] and resultset['found']:
-            log_warning(f'get_user is OK and will return User(**)')
+            log_debug('get_user is OK and will return User(**)')
             return User(**resultset['resultset'])
     except Exception as err:
-        log_warning(f'get_user ERROR: {str(err)}')
+        log_debug(f'get_user ERROR: {str(err)}')
 
 
 def get_user_hashed_password(username: str):
@@ -41,33 +41,33 @@ def get_user_hashed_password(username: str):
         fields = {'_id': 0}
         resultset = fetch_user_by_entryname('username', username, fields)
         if not resultset['error'] and resultset['found']:
-            log_warning(
+            log_debug(
                 'get_user_hashed_password.resultset:' +
                 f" {str(resultset['resultset'])}"
             )
             response = UserInDB(**resultset['resultset'])
-            log_warning(
+            log_debug(
                 'get_user_hashed_password.response:' +
                 f" {str(response)}"
             )
             return response
     except Exception as err:
-        log_warning(f'get_user_hashed_password ERROR: {str(err)}')
+        log_debug(f'get_user_hashed_password ERROR: {str(err)}')
 
 
 def authenticate_user(username: str, password: str):
-    # print(f'authenticate_user.username: {username}, password: {password}')
+    log_debug(f'authenticate_user.username: {username}, password: {password}')
     try:
         user = get_user_hashed_password(username)
-        # print(f'authenticate_user.user: {user}')
+        log_debug(f'authenticate_user.user: {user}')
         if not user:
             return False
         if not verify_password(password, user.hashed_password):
             return False
-        # print('authenticate_user: ALL CLEAR OK')
+        log_debug('authenticate_user: ALL CLEAR OK')
         return user
     except Exception as err:
-        log_warning(f'authenticate_user ERROR: {str(err)}')
+        log_debug(f'authenticate_user ERROR: {str(err)}')
 
 
 def create_access_token(
@@ -123,10 +123,10 @@ async def get_current_active_user(
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
-    # print(f'login_for_access_token.form_data = {form_data}')
+    log_debug(f'login_for_access_token.form_data = {form_data}')
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
-        print("ERROR on login: Incorrect username or password")
+        log_warning("ERROR on login: Incorrect username or password")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -142,7 +142,7 @@ def login_for_access_token(
         response = {
             "access_token": access_token, "token_type": "bearer"
         }
-        # print(f'login_for_access_token.response = {response}')
+        log_debug(f'login_for_access_token.response = {response}')
         return response
     except Exception as err:
-        log_warning(f'login_for_access_token ERROR: {str(err)}')
+        log_debug(f'login_for_access_token ERROR: {str(err)}')

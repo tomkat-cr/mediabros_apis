@@ -4,7 +4,7 @@ from typing import Union
 from pydantic import BaseModel
 
 from .utility_general import get_default_db_resultset, \
-    get_standard_base_exception_msg
+    get_standard_base_exception_msg, log_debug
 from .utility_db import db
 
 
@@ -42,7 +42,7 @@ class UserInDB(User):
 
 def fetch_user_by_entryname(entry_name, entry_value, fields={}):
     resultset = get_default_db_resultset()
-    # print(f'** DB ** fetch_user_by_entryname: {entry_name} {entry_value}')
+    log_debug(f'** DB ** fetch_user_by_entryname: {entry_name} {entry_value}')
     try:
         resultset['resultset'] = db.users.find_one(
             {entry_name: entry_value},
@@ -54,5 +54,5 @@ def fetch_user_by_entryname(entry_name, entry_value, fields={}):
             err, 'FUBEN1'
         )
         resultset['error'] = True
-    # print(f'** DB ** fetch_user_by_entryname.resultset: {resultset}')
+    log_debug(f'** DB ** fetch_user_by_entryname.resultset: {resultset}')
     return resultset

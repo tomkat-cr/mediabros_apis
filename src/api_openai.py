@@ -2,7 +2,7 @@
 # 2023-01-24 | CR
 import openai
 
-from .utility_general import get_api_standard_response
+from .utility_general import get_api_standard_response, log_debug, log_warning
 from .settings import settings
 
 
@@ -50,7 +50,7 @@ def openai_api_general(
             'temperature': temperature,
             'max_tokens': max_tokens,
         }
-        print(f'>>> openai_api_general.debug_info: {debug_info}')
+        log_debug(f'>>> openai_api_general.debug_info: {debug_info}')
         openai_response = openai.Completion.create(
             model=openai_model,
             prompt=get_prompt_model(prompt_model, question),
@@ -61,7 +61,7 @@ def openai_api_general(
     except Exception as err:
         response['error'] = True
         response['error_message'] = f'ERROR OAI-030: {str(err)}'
-        print(response['error_message'])
+        log_warning(response['error_message'])
         return response
 
     if debug:
@@ -75,12 +75,12 @@ def openai_api_general(
             response['error'] = True
             response['error_message'] = 'ERROR OAI-020:' + \
                 ' OpenAI response error. No choices text'
-            print(response['error_message'])
+            log_warning(response['error_message'])
     except Exception as err:
         response['data'] = openai_response
         response['error'] = True
         response['error_message'] = f'ERROR OAI-025: {str(err)}'
-        print(response['error_message'])
+        log_warning(response['error_message'])
     return response
 
 
@@ -91,7 +91,7 @@ def openai_api_with_defaults(request):
     openai_model = request.get('m')
     temperature = request.get('t')
     max_tokens = request.get('mt')
-    
+
     prompt_model = openai_defaults.PROMPT_MODEL if prompt_model is None \
         else prompt_model
     openai_model = openai_defaults.OPENAI_MODEL if openai_model is None \

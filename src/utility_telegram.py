@@ -5,6 +5,7 @@ import sys
 import requests
 
 from .settings import settings
+from .utility_general import log_normal
 
 
 def send_tg_message(user_id, message):
@@ -14,7 +15,7 @@ def send_tg_message(user_id, message):
         '/sendMessage?chat_id=' + user_id + \
         '&text=' + str(message)
     response = requests.get(url)
-    print(response.content)
+    log_normal(response.content)
     return response
 
 

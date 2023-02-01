@@ -37,7 +37,6 @@ if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" ]]; then
         pip install "passlib[bcrypt]"
         pip install wheel
         pip install python-multipart
-        
         pip freeze > requirements.txt
     fi
 fi

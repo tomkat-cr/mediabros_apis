@@ -11,8 +11,6 @@ from .settings import settings
 
 # Este método se encarga de configurar la conexión con la base de datos
 def get_db():
-    # print(f'*** get_db.settings.DB_URI: {settings.DB_URI}')
-    # print(f'*** get_db.settings.DB_NAME: {settings.DB_NAME}')
     client = MongoClient(settings.DB_URI)
     return client.get_database(settings.DB_NAME)
 

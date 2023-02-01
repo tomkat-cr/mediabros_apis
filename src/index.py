@@ -13,7 +13,8 @@ from pydantic import BaseModel
 from .utility_password import get_password_hash
 from .utility_jwt import Token, login_for_access_token, get_current_active_user
 from .utility_date import get_formatted_date
-from .utility_general import get_command_line_args, log_endpoint_debug
+from .utility_general import get_command_line_args, log_endpoint_debug, \
+    log_debug, log_normal
 from .model_users import User   # , UserInDB
 from .api_openai import openai_api_with_defaults
 from .api_currency_exchange import crypto, usdcop, usdveb, veb_cop
@@ -29,11 +30,12 @@ logging.basicConfig(
 params = get_command_line_args()
 if params['mode'] == 'cli':
     apiResponse = request_processing(params.get('body', ''))
-    print(apiResponse)
+    log_normal(apiResponse)
 
 api = FastAPI()
 app = ASGIMiddleware(api)
-print(f'Mediabros APIs started. {get_formatted_date()}')
+log_normal(f'Mediabros APIs started. {get_formatted_date()}')
+
 
 # Authentication EndPoints
 
@@ -46,14 +48,16 @@ async def login_for_access_token_endpoint(
     return login_for_access_token(form_data)
 
 
-# @api.get("/pget")
-# async def pget(p: str):
-#     log_endpoint_debug('/pget')
-#     return dict({'password_hashed': get_password_hash(p)})
+@api.get("/pget")
+async def pget(p: str):
+    log_endpoint_debug('/pget')
+    return dict({'password_hashed': get_password_hash(p)})
 
 
 # @api.get("/users/me/", response_model=User)
-# async def read_users_me(current_user: User = Depends(get_current_active_user)):
+# async def read_users_me(
+#   current_user: User = Depends(get_current_active_user)
+# ):
 #     log_endpoint_debug('/users/me/')
 #     return current_user
 
@@ -77,12 +81,12 @@ class Body(BaseModel):
     mt: Union[str, None] = None
 
 
-# @api.get("/query_params/")
-# async def api_query_params(request: Request):
-#     log_endpoint_debug('/query_params')
-#     api_response = request.query_params
-#     print(api_response)
-#     return api_response
+@api.get("/query_params/")
+async def api_query_params(request: Request):
+    log_endpoint_debug('/query_params')
+    api_response = request.query_params
+    log_debug(api_response)
+    return api_response
 
 
 @api.post("/ai")
@@ -92,9 +96,9 @@ async def ai_post(
 ):
     log_endpoint_debug('/ai POST')
     form_params = dict(body)
-    # print(f'ai_post: body = {str(form_params)}')
+    log_debug(f'ai_post: body = {str(form_params)}')
     api_response = openai_api_with_defaults(form_params)
-    # print(f'ai_post: api_response = {api_response}')
+    log_debug(f'ai_post: api_response = {api_response}')
     return api_response
 
 
@@ -104,9 +108,9 @@ async def ai_get(
     current_user: User = Depends(get_current_active_user)
 ):
     log_endpoint_debug('/ai GET')
-    # print(f'ai_get: request = {request.query_params}')
+    log_debug(f'ai_get: request = {request.query_params}')
     api_response = openai_api_with_defaults(request.query_params)
-    # print(f'ai_get: api_response = {api_response}')
+    log_debug(f'ai_get: api_response = {api_response}')
     return api_response
 
 
@@ -118,16 +122,16 @@ async def codex_get(
     log_endpoint_debug('/codex')
     request_params = dict(request.query_params)
     request_params['m'] = 'code-davinci-002'
-    # print(f'codex_get: request = {request_params}')
+    log_debug(f'codex_get: request = {request_params}')
     api_response = openai_api_with_defaults(request_params)
-    # print(f'codex_get: api_response = {api_response}')
+    log_debug(f'codex_get: api_response = {api_response}')
     return api_response
 
 
-# @api.get("/usdcop")
-# def endpoint_usdcop_plain():
-#     log_endpoint_debug('/usdcop')
-#     return usdcop(False)
+@api.get("/usdcop")
+def endpoint_usdcop_plain():
+    log_endpoint_debug('/usdcop')
+    return usdcop(False)
 
 
 @api.get("/usdcop/{debug}")
@@ -136,10 +140,10 @@ def endpoint_usdcop(debug: int):
     return usdcop(debug == 1)
 
 
-# @api.get("/usdvef")
-# def endpoint_usdvef_plain():
-#     log_endpoint_debug('/usdvef')
-#     return usdveb(False)
+@api.get("/usdvef")
+def endpoint_usdvef_plain():
+    log_endpoint_debug('/usdvef')
+    return usdveb(False)
 
 
 @api.get("/usdvef/{debug}")
@@ -148,10 +152,10 @@ def endpoint_usdvef(debug: int):
     return usdveb(debug == 1)
 
 
-# @api.get("/copveb")
-# def endpoint_copveb_plain():
-#     log_endpoint_debug('/copveb')
-#     return veb_cop('copveb', False)
+@api.get("/copveb")
+def endpoint_copveb_plain():
+    log_endpoint_debug('/copveb')
+    return veb_cop('copveb', False)
 
 
 @api.get("/copveb/{debug}")
@@ -160,10 +164,10 @@ def endpoint_copveb(debug: int):
     return veb_cop('copveb', debug == 1)
 
 
-# @api.get("/vebcop")
-# def endpoint_vebcop_plain():
-#     log_endpoint_debug('/vebcop')
-#     return veb_cop('vebcop', False)
+@api.get("/vebcop")
+def endpoint_vebcop_plain():
+    log_endpoint_debug('/vebcop')
+    return veb_cop('vebcop', False)
 
 
 @api.get("/vebcop/{debug}")
@@ -172,10 +176,10 @@ def endpoint_vebcop(debug: int):
     return veb_cop('vebcop', debug == 1)
 
 
-# @api.get("/btc")
-# def endpoint_btc_plain():
-#     log_endpoint_debug('/btc')
-#     return crypto('btc', 'usd', False)
+@api.get("/btc")
+def endpoint_btc_plain():
+    log_endpoint_debug('/btc')
+    return crypto('btc', 'usd', False)
 
 
 @api.get("/btc/{debug}")
@@ -184,10 +188,10 @@ def endpoint_btc(debug: int):
     return crypto('btc', 'usd', debug == 1)
 
 
-# @api.get("/eth")
-# def endpoint_eth_plain():
-#     log_endpoint_debug('/eth')
-#     return crypto('eth', 'usd', False)
+@api.get("/eth")
+def endpoint_eth_plain():
+    log_endpoint_debug('/eth')
+    return crypto('eth', 'usd', False)
 
 
 @api.get("/eth/{debug}")
@@ -196,16 +200,16 @@ def endpoint_eth(debug: int):
     return crypto('eth', 'usd', debug == 1)
 
 
-# @api.get("/crypto/{symbol}")
-# def endpoint_crypto_plain(symbol: str):
-#     log_endpoint_debug(f'/crypto/{symbol}')
-#     return crypto(symbol, 'usd', False)
+@api.get("/crypto/{symbol}")
+def endpoint_crypto_plain(symbol: str):
+    log_endpoint_debug(f'/crypto/{symbol}')
+    return crypto(symbol, 'usd', False)
 
 
-# @api.get("/crypto/{symbol}/{debug}")
-# def endpoint_crypto(symbol: str, debug: int):
-#     log_endpoint_debug(f'/crypto/{symbol}/{debug}')
-#     return crypto(symbol, 'usd', debug == 1)
+@api.get("/crypto/{symbol}/{debug}")
+def endpoint_crypto(symbol: str, debug: int):
+    log_endpoint_debug(f'/crypto/{symbol}/{debug}')
+    return crypto(symbol, 'usd', debug == 1)
 
 
 @api.get("/crypto/{symbol}/{currency}/{debug}")

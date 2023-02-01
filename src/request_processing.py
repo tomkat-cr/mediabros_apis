@@ -1,5 +1,6 @@
 from .api_openai import openai_api_with_defaults
 from .api_currency_exchange import usdcop, usdveb, veb_cop, crypto
+from .utility_general import log_normal
 
 
 def request_processing(message):
@@ -13,10 +14,10 @@ def request_processing(message):
             param_separated.remove('/debug')
     other_param = ' '.join(param_separated)
 
-    print('request_processing')
-    print(f'command: {command}')
-    print(f'debug: {debug}')
-    print(f'other_param: {other_param}')
+    log_normal('request_processing')
+    log_normal(f'command: {command}')
+    log_normal(f'debug: {debug}')
+    log_normal(f'other_param: {other_param}')
 
     if command == '/ai':
         request = dict()

@@ -2,6 +2,7 @@ import os
 
 
 class settings:
+    DEBUG = True if os.environ.get('DEBUG', '0') == '1' else False
     APP_NAME = os.environ.get('APP_NAME')
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
     TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
