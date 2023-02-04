@@ -10,15 +10,15 @@ from fastapi.security import OAuth2PasswordRequestForm
 from a2wsgi import ASGIMiddleware
 from pydantic import BaseModel
 
-from .utility_password import get_password_hash
-from .utility_jwt import Token, login_for_access_token, get_current_active_user
-from .utility_date import get_formatted_date
-from .utility_general import get_command_line_args, log_endpoint_debug, \
+from chalicelib.utility_password import get_password_hash
+from chalicelib.utility_jwt import Token, login_for_access_token, get_current_active_user
+from chalicelib.utility_date import get_formatted_date
+from chalicelib.utility_general import get_command_line_args, log_endpoint_debug, \
     log_debug, log_normal
-from .model_users import User   # , UserInDB
-from .api_openai import openai_api_with_defaults
-from .api_currency_exchange import crypto, usdcop, usdveb, veb_cop
-from .request_processing import request_processing
+from chalicelib.model_users import User
+from chalicelib.api_openai import openai_api_with_defaults
+from chalicelib.api_currency_exchange import crypto, usdcop, usdveb, veb_cop
+from chalicelib.request_processing import request_processing
 
 
 logging.basicConfig(
@@ -34,10 +34,10 @@ if params['mode'] == 'cli':
 
 api = FastAPI()
 app = ASGIMiddleware(api)
-log_normal(f'Mediabros APIs started. {get_formatted_date()}')
+log_normal(f'Mediabros APIs started [FastAPI]. {get_formatted_date()}')
 
 
-# Authentication EndPoints
+# JWT Authentication EndPoints
 
 
 @api.post("/token", response_model=Token)

@@ -1,8 +1,10 @@
 #!/bin/sh
-# run.sh
+# run_vercel.sh
 # 2023-01-21 | CR
 #
-APP_DIR='src'
+APP_DIR='chalicelib'
+PYTHON3_EXEC='/usr/local/bin/python3.9'
+RUN_AS_MODULE=1
 ENV_FILESPEC=""
 if [ -f "./.env" ]; then
     ENV_FILESPEC="./.env"
@@ -21,7 +23,7 @@ if [ "$1" = "deactivate" ]; then
     deactivate ;
 fi
 if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" ]]; then
-    python3 -m venv ${APP_DIR} ;
+    ${PYTHON3_EXEC} -m venv ${APP_DIR} ;
     . ${APP_DIR}/bin/activate ;
     cd ${APP_DIR} ;
     if [ -f "requirements.txt" ]; then
@@ -37,6 +39,7 @@ if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" ]]; then
         pip install "passlib[bcrypt]"
         pip install wheel
         pip install python-multipart
+        pip install python-dotenv
         pip freeze > requirements.txt
     fi
 fi
@@ -54,6 +57,9 @@ if [ "$1" = "clean" ]; then
     rm -rf lib ;
     rm -rf pyvenv.cfg ;
     rm -rf ../.vercel/cache ;
+    rm -rf .vercel/cache ;
+    rm -rf ../node_modules ;
+    rm requirements.txt
     ls -lah
 fi
 
@@ -71,22 +77,30 @@ fi
 if [[ "$1" = "run_module" ]]; then
     # npm run run:cli .env /cop /debug otros strings
     echo "Run module only as CLI..."
-    cd ..
-    python -m src.index cli $2 $3 $4 $5 $6 $7 $8 $9
+    if [ "$RUN_AS_MODULE" = "1" ]; then
+        cd ..
+        python -m ${APP_DIR}.index cli $2 $3 $4 $5 $6 $7 $8 $9
+    else
+        python -m index cli $2 $3 $4 $5 $6 $7 $8 $9
+    fi
     echo "Done..."
 fi
 
 if [[ "$1" = "run" || "$1" = "" ]]; then
-    echo "Run..."
-    cd ..
+    if [ "$RUN_AS_MODULE" = "1" ]; then
+        cd ..
+    fi
     vercel dev --listen 0.0.0.0:$PORT ;
-    echo "Done..."
 fi
 if [ "$1" = "deploy_prod" ]; then
-    cd ..
+    if [ "$RUN_AS_MODULE" = "1" ]; then
+        cd ..
+    fi
     vercel --prod ;
 fi
 if [ "$1" = "rename_staging" ]; then
-    cd ..
+    if [ "$RUN_AS_MODULE" = "1" ]; then
+        cd ..
+    fi
     vercel alias $2 ${APP_NAME}-staging-tomkat-cr.vercel.app
 fi

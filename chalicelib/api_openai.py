@@ -2,8 +2,8 @@
 # 2023-01-24 | CR
 import openai
 
-from .utility_general import get_api_standard_response, log_debug, log_warning
-from .settings import settings
+from chalicelib.utility_general import get_api_standard_response, log_debug, log_warning
+from chalicelib.settings import settings
 
 
 class openai_defaults:

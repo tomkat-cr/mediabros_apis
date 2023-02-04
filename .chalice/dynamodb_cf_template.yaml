@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: chalicelib_users
+      AttributeDefinitions:
+        - AttributeName: "username"
+          AttributeType: "S"
+        # - AttributeName: "email"
+        #   AttributeType: "S"
+      KeySchema:
+        - AttributeName: "username"
+          KeyType: "HASH"
+        # - AttributeName: "email"
+        #   KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: chalicelib_sessions
+      AttributeDefinitions:
+        - AttributeName: "username"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "username"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+
+Outputs:
+  Users:
+    Description: Users DynamoDB table
+    Value: !Ref "UsersTable"
+  Sessions:
+    Description: Sessions DynamoDB table
+    Value: !Ref "SessionsTable"

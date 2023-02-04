@@ -132,12 +132,18 @@ node_modules
 
 # For the vercel deployment because `venv` will br replaced by `src` directory.
 .vercel
-src/bin
-src/include
-src/lib
-src/pyvenv.cfg
-src/logs/api_general.log
-src/var
+chalicelib/bin
+chalicelib/include
+chalicelib/lib
+chalicelib/pyvenv.cfg
+chalicelib/logs/api_general.log
+chalicelib/var
+chalicelib/src
+.chalice/deployments/
+.chalice/venv/
+.chalice/deployed/
 
 # Editor
 .vscode
+
+config.json

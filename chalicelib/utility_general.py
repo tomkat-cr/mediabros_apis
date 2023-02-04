@@ -3,8 +3,8 @@ import datetime
 import sys
 import traceback
 
-from .utility_date import get_formatted_date
-from .settings import settings
+from chalicelib.utility_date import get_formatted_date
+from chalicelib.settings import settings
 
 
 # Utility functions

@@ -3,9 +3,9 @@ from typing import Union
 
 from pydantic import BaseModel
 
-from .utility_general import get_default_db_resultset, \
+from chalicelib.utility_general import get_default_db_resultset, \
     get_standard_base_exception_msg, log_debug
-from .utility_db import db
+from chalicelib.utility_db import db
 
 
 # users_db = {

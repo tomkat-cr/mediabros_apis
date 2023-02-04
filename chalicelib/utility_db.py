@@ -3,7 +3,7 @@ from bson.json_util import dumps
 from pymongo import MongoClient
 from werkzeug.local import LocalProxy
 
-from .settings import settings
+from chalicelib.settings import settings
 
 
 # ----------------------- Db General -----------------------

@@ -1,0 +1,5 @@
+# Procfile
+# 2023-02-02
+# Modify this Procfile to fit your needs
+# web: gunicorn server:app
+web: gunicorn index:app

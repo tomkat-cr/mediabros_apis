@@ -1,16 +1,15 @@
 {
     "version": 2,
-    "outputDirectory": "chalicelib",
     "builds": [
         {
-            "src": "chalicelib/index.py",
+            "src": "index.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "chalicelib/index.py"
+            "dest": "index.py"
         }
     ]
 }

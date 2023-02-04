@@ -1,7 +1,7 @@
 import datetime
 import requests
-from .utility_general import get_api_standard_response, log_warning
-from .utility_telegram import report_error_to_tg_group
+from chalicelib.utility_general import get_api_standard_response, log_warning
+from chalicelib.utility_telegram import report_error_to_tg_group
 
 
 # ------------------------

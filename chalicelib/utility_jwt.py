@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 from typing import Union
 from pydantic import BaseModel
@@ -6,10 +7,10 @@ from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
-from .model_users import fetch_user_by_entryname, User, UserInDB
-from .settings import settings
-from .utility_password import verify_password
-from .utility_general import log_debug, log_warning
+from chalicelib.model_users import fetch_user_by_entryname, User, UserInDB
+from chalicelib.settings import settings
+from chalicelib.utility_password import verify_password
+from chalicelib.utility_general import log_debug, log_warning
 
 
 class Token(BaseModel):
@@ -25,6 +26,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def get_user(username: str):
+    log_debug(f'>>> get_user({username})')
     try:
         fields = {'_id': 0}
         resultset = fetch_user_by_entryname('username', username, fields)
@@ -118,6 +120,26 @@ async def get_current_active_user(
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+def get_current_active_user_chalice(token):
+    try:
+        current_user = asyncio.run(get_current_user(token))
+    except HTTPException as http_err:
+        log_debug(
+            '>>>> get_current_active_user_chalice.HTTP_ERR:' +
+            f' {http_err.status_code} / {http_err.detail}' +
+            f' / {http_err.headers}'
+        )
+        return http_err
+    except Exception as err:
+        log_debug(f'>>>> get_current_active_user_chalice.err: {err}')
+        raise
+    log_debug(
+        '>>>> get_current_active_user_chalice.' +
+        f'get_current_active_user.current_user: {current_user}'
+    )
+    return asyncio.run(get_current_active_user(current_user))
 
 
 def login_for_access_token(

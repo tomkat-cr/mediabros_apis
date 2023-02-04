@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+openai = "*"
+wheel = "*"
+python-multipart = "*"
+fastapi = "*"
+pymongo = "*"
+werkzeug = "*"
+boto3 = "*"
+chalice = "*"
+python-dotenv = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+passlib = {extras = ["bcrypt"], version = "*"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

@@ -1,8 +1,9 @@
 #!/bin/sh
 # run_fly_io.sh
-# 2022-12-31 | CR
+# 2023-02-01 | CR
 #
-APP_DIR='src'
+APP_DIR='chalicelib'
+PYTHON3_EXEC='/usr/local/bin/python3.9'
 if [ -f "./.env" ]; then
     ENV_FILESPEC="./.env"
 else
@@ -17,7 +18,7 @@ if [ "$1" = "deactivate" ]; then
     deactivate ;
 fi
 if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" && "$1" != "set_webhook" ]]; then
-    python3 -m venv ${APP_DIR} ;
+    ${PYTHON3_EXEC} -m venv ${APP_DIR} ;
     . ${APP_DIR}/bin/activate ;
     cd ${APP_DIR} ;
     if [ -f "requirements.txt" ]; then
@@ -33,6 +34,7 @@ if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" && "$1" != "s
         pip install "passlib[bcrypt]"
         pip install wheel
         pip install python-multipart
+        pip install python-dotenv
         pip install gunicorn
         pip freeze > requirements.txt
     fi
@@ -50,6 +52,9 @@ if [ "$1" = "clean" ]; then
     rm -rf lib ;
     rm -rf pyvenv.cfg ;
     rm -rf ../.vercel/cache ;
+    rm -rf .vercel/cache ;
+    rm -rf ../node_modules ;
+    rm requirements.txt
     ls -lah
 fi
 
@@ -98,8 +103,7 @@ if [ "$1" = "run_ngrok" ]; then
 fi
 
 if [[ "$1" = "run" || "$1" = "" ]]; then
-    # python index.py
     cd ..
     # python -m ${APP_DIR}.index
-    gunicorn -b 0.0.0.0:${PORT} --log-level debug -w 4 'src.index:app'
+    gunicorn -b 0.0.0.0:${PORT} --log-level debug -w 4 'chalicelib.index:app'
 fi

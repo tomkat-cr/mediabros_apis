@@ -1,6 +1,6 @@
-from .api_openai import openai_api_with_defaults
-from .api_currency_exchange import usdcop, usdveb, veb_cop, crypto
-from .utility_general import log_normal
+from chalicelib.api_openai import openai_api_with_defaults
+from chalicelib.api_currency_exchange import usdcop, usdveb, veb_cop, crypto
+from chalicelib.utility_general import log_normal
 
 
 def request_processing(message):

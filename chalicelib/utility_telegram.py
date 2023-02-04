@@ -4,8 +4,8 @@ import os
 import sys
 import requests
 
-from .settings import settings
-from .utility_general import log_normal
+from chalicelib.settings import settings
+from chalicelib.utility_general import log_normal
 
 
 def send_tg_message(user_id, message):
