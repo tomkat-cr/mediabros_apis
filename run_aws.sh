@@ -22,6 +22,7 @@ fi
 if [ "$1" = "pipfile" ]; then
     deactivate ;
     
+    # https://realpython.com/intro-to-pyenv/
     pipenv --python 3.9
 
     pipenv install requests
@@ -74,18 +75,18 @@ if [[ "$1" = "test" ]]; then
 fi
 
 if [[ "$1" = "run" || "$1" = "" ]]; then
-    pipenv shell chalice local --port ${PORT}
+    pipenv run chalice local --port ${PORT}
     exit
 fi
 
 if [ "$1" = "deploy" ]; then
     pipenv requirements > requirements.txt
-    pipenv shell chalice deploy --stage dev
+    pipenv run chalice deploy --stage dev
     exit
 fi
 if [ "$1" = "deploy_prod" ]; then
     pipenv requirements > requirements.txt
-    pipenv shell chalice deploy --stage prod
+    pipenv run chalice deploy --stage prod
     exit
 fi
 
@@ -96,7 +97,7 @@ fi
 
 if [ "$1" = "delete_app" ]; then
     # Delete application
-    pipenv shell chalice delete
+    pipenv run chalice delete
     exit
 fi
 
