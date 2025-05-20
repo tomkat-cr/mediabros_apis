@@ -4,20 +4,23 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+monitor-exchange-rates = {ref = "develop", git = "https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git"}
+bcv-exchange-rates = {ref = "develop", git = "https://github.com/tomkat-cr/bcv-exchange-rates"}
+cop-exchange-rates = {ref = "develop", git = "https://github.com/tomkat-cr/cop-exchange-rates"}
 requests = "*"
 openai = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+passlib = {extras = ["bcrypt"], version = "*"}
 wheel = "*"
 python-multipart = "*"
+python-dotenv = "*"
 fastapi = "*"
 pymongo = "*"
 werkzeug = "*"
 boto3 = "*"
 chalice = "*"
-python-dotenv = "*"
-python-jose = {extras = ["cryptography"], version = "*"}
-passlib = {extras = ["bcrypt"], version = "*"}
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.11"

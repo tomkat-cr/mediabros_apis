@@ -147,3 +147,4 @@ chalicelib/src
 .vscode
 
 config.json
+Pipfile.lock

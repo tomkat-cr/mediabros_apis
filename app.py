@@ -309,7 +309,7 @@ def login_for_access_token_endpoint():
     )
     try:
         login_data = login_for_access_token(user_data)
-    except HTTPException as err: 
+    except HTTPException as err:
         return http_response(
             err.status_code,
             err.detail,

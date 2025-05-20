@@ -1,26 +1,36 @@
 {
-    "version": "2.0",
-    "app_name": "mediabros-apis",
-    "environment_variables": {
-        "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN_placeholder",
-        "TELEGRAM_CHAT_ID": "TELEGRAM_CHAT_ID_placeholder",
-        "OPENAI_API_KEY": "OPENAI_API_KEY_placeholder",
-        "APP_NAME": "APP_NAME_placeholder",
-        "SERVER_NAME": "SERVER_NAME_placeholder",
-        "DB_TYPE": "DB_TYPE_placeholder",
-        "DB_URI": "DB_URI_placeholder",
-        "DB_NAME": "DB_NAME_placeholder",
-        "SECRET_KEY": "SECRET_KEY_placeholder",
-        "ALGORITHM": "ALGORITHM_placeholder",
-        "ACCESS_TOKEN_EXPIRE_MINUTES": "ACCESS_TOKEN_EXPIRE_MINUTES_placeholder",
-        "DEBUG": "DEBUG_placeholder",
-        "APP_DEBUG": "APP_DEBUG_placeholder"
+  "version": "2.0",
+  "app_name": "mediabros-apis",
+  "environment_variables": {
+    "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN_placeholder",
+    "TELEGRAM_CHAT_ID": "TELEGRAM_CHAT_ID_placeholder",
+    "OPENAI_API_KEY": "OPENAI_API_KEY_placeholder",
+    "APP_NAME": "APP_NAME_placeholder",
+    "SERVER_NAME": "SERVER_NAME_placeholder",
+    "DB_TYPE": "DB_TYPE_placeholder",
+    "DB_URI": "DB_URI_placeholder",
+    "DB_NAME": "DB_NAME_placeholder",
+    "SECRET_KEY": "SECRET_KEY_placeholder",
+    "ALGORITHM": "ALGORITHM_placeholder",
+    "ACCESS_TOKEN_EXPIRE_MINUTES": "ACCESS_TOKEN_EXPIRE_MINUTES_placeholder",
+    "CODE_DEBUG": "CODE_DEBUG_placeholder",
+    "APP_DEBUG": "APP_DEBUG_placeholder",
+    "MONITOR_EXCHANGE_URL": "MONITOR_EXCHANGE_URL_placeholder",
+    "VEB_EXCHANGE_URL": "VEB_EXCHANGE_URL_placeholder",
+    "COP_EXCHANGE_URL": "COP_EXCHANGE_URL_placeholder",
+    "BCV_EXCHANGE_RATES_BRANCH": "BCV_EXCHANGE_RATES_BRANCH_placeholder",
+    "COP_EXCHANGE_RATES_BRANCH": "COP_EXCHANGE_RATES_BRANCH_placeholder",
+    "MONITOR_EXCHANGE_RATES_BRANCH": "MONITOR_EXCHANGE_RATES_BRANCH_placeholder",
+    "GITHUB_API_KEY": "GITHUB_API_KEY_placeholder"
+  },
+  "stages": {
+    "dev": {
+      "api_gateway_stage": "api-dev",
+      "autogen_policy": false
     },
-    "stages": {
-      "api": {
-        "api_gateway_stage": "api",
-        "autogen_policy": false
-      }
+    "prod": {
+      "api_gateway_stage": "api",
+      "autogen_policy": false
     }
   }
-  
+}

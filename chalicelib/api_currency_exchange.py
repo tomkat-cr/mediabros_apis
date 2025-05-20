@@ -1,10 +1,13 @@
+import os
 import datetime
 import requests
 from chalicelib.utility_general import get_api_standard_response, log_warning
 from chalicelib.utility_telegram import report_error_to_tg_group
+from chalicelib.utility_general import log_debug
 
 
-# ------------------------
+DEBUG = os.getenv("CODE_DEBUG", "0") == "1"
+log_debug(f"[DEBUG] {DEBUG}")
 
 
 # Exchange APIs
@@ -44,9 +47,50 @@ def crypto_api(symbol, currency):
     return api_response
 
 
+def veb_monitor_api():
+    # url = 'https://monitor-exchange-rates.vercel.app/get_exchange_rates'
+    url = os.getenv("MONITOR_EXCHANGE_URL")
+    if not url:
+        api_response = veb_monitor_api_from_class()
+    else:
+        api_response = get_api_resp_from_url(url, "Monitor USD/Bs")
+    _ = DEBUG and log_debug(f'veb_monitor_api | api_response:\n{api_response}')
+    return api_response
+
+
+def veb_monitor_api_from_class():
+    from monitor_exchange_rates.monitor import get_monitor_exchange_rates
+    api_response = get_monitor_exchange_rates()
+    return get_api_resp_from_class_wrapper(api_response)
+
+
 def veb_bcv_api():
+    # url = 'https://bcv-exchange-rates.vercel.app/get_exchange_rates'
+    url = os.getenv("VEB_EXCHANGE_URL")
+    if not url:
+        api_response = veb_bcv_api_from_class()
+    else:
+        api_response = get_api_resp_from_url(url, "BCV official USD/Bs")
+    _ = DEBUG and log_debug(f'veb_bcv_api | api_response:\n{api_response}')
+    return api_response
+
+
+def veb_bcv_api_from_class():
+    from bcv_exchange_rates.bcv import get_bcv_exchange_rates
+    api_response = get_bcv_exchange_rates()
+    return get_api_resp_from_class_wrapper(api_response)
+
+
+def get_api_resp_from_class_wrapper(api_resp):
     api_response = get_api_standard_response()
-    url = 'https://bcv-exchange-rates.vercel.app/get_exchange_rates'
+    api_response['data'] = api_resp
+    api_response['error'] = api_resp['error']
+    api_response['error_message'] = api_resp['error_message']
+    return api_response
+
+
+def get_api_resp_from_url(url, name):
+    api_response = get_api_standard_response()
     try:
         response = requests.get(url)
     except Exception as err:
@@ -55,19 +99,18 @@ def veb_bcv_api():
     else:
         if response.status_code == 200:
             result = response.json()
-            api_response['data'] = result
-            if result['error']:
-                api_response['error'] = True
-                api_response['error_message'] = result['error_message']
+            api_response['data'] = dict(result)
+            api_response['error'] = result['error']
+            api_response['error_message'] = result['error_message']
         else:
             api_response['error'] = True
-            api_response['error_message'] = 'ERROR reading BCV official' + \
-                ' USD/Bs API'
+            api_response['error_message'] = f'ERROR reading {name} API'
     report_error_to_tg_group(api_response)
     return api_response
 
 
 def veb_dolartoday_api():
+    # DEPRECATED
     api_response = get_api_standard_response()
     url = 'https://s3.amazonaws.com/dolartoday/data.json'
     try:
@@ -82,26 +125,26 @@ def veb_dolartoday_api():
             api_response['error'] = True
             api_response['error_message'] = 'ERROR reading DolarToday API'
     report_error_to_tg_group(api_response)
+    _ = DEBUG and log_debug("veb_dolartoday_api | " +
+                            f"api_response:\n{api_response}")
     return api_response
 
 
 def cop_api():
-    api_response = get_api_standard_response()
-    url = 'https://cop-exchange-rates.vercel.app/get_exchange_rates'
-    try:
-        response = requests.get(url)
-    except Exception as err:
-        api_response['error'] = True
-        api_response['error_message'] = str(err)
+    # url = 'https://cop-exchange-rates.vercel.app/get_exchange_rates'
+    url = os.getenv("COP_EXCHANGE_URL")
+    if not url:
+        api_response = cop_api_from_class()
     else:
-        if response.status_code == 200:
-            api_response['data'] = response.json()
-        else:
-            api_response['error'] = True
-            api_response['error_message'] = 'ERROR reading ' + \
-                'Mediabros\' cop-exchange-rates API'
-    report_error_to_tg_group(api_response)
+        api_response = get_api_resp_from_url(url, "Colombian Peso USD/COP")
+    _ = DEBUG and log_debug(f"cop_api | api_response:\n{api_response}")
     return api_response
+
+
+def cop_api_from_class():
+    from cop_exchange_rates.cop import get_cop_exchange_rates
+    api_response = get_cop_exchange_rates()
+    return get_api_resp_from_class_wrapper(api_response)
 
 
 # Middleware
@@ -125,6 +168,7 @@ def crypto(symbol, currency, debug):
             else f"ERROR: no {currency} element in API result"
         response_message = f'The {symbol} to {currency} ' + \
             f'exchange rate is: {exchange_rate}'
+    _ = DEBUG and log_debug(f"crypto | response_message:\n{response_message}")
     return response_message
 
 
@@ -149,6 +193,30 @@ def veb_bcv(debug):
         response_message = 'BCV official exchange rate:' + \
             f' {exchange_rate:.2f} Bs/USD.\n' + \
             f'Effective Date: {effective_date}'
+    _ = DEBUG and log_debug(f"veb_bcv | response_message:\n{response_message}")
+    return response_message
+
+
+def veb_monitor(debug):
+    api_response = veb_monitor_api()
+    if api_response['error']:
+        return api_response['error_message']
+    result = api_response['data']
+    if debug:
+        response_message = f'Monitor exchange rates: {result}'
+    else:
+        exchange_rate = [
+            f"  {symbol_data['symbol']}: {symbol_data['value']}"
+            for _, symbol_data in result['data'].items()
+            if isinstance(symbol_data, dict) and "value" in symbol_data
+        ]
+        exchange_rate = "\n".join(exchange_rate)
+        from_date = result['data']['effective_date']
+        response_message = 'Monitor exchange rate:\n' + \
+            f'{exchange_rate}\n' + \
+            f'Effective Date: {from_date}'
+    _ = DEBUG and log_debug("veb_monitor | " +
+                            f"response_message:\n{response_message}")
     return response_message
 
 
@@ -165,12 +233,17 @@ def veb_dolartoday(debug):
         response_message = 'DolarToday exchange rate:' + \
             f' {exchange_rate:.2f} Bs/USD.\n' + \
             f'Date: {from_date}'
+    _ = DEBUG and log_debug("veb_dolartoday | " +
+                            f"response_message:\n{response_message}")
     return response_message
 
 
 def usdveb(debug):
     response_message = veb_bcv(debug)
-    response_message += '\n\n' + veb_dolartoday(debug)
+    response_message += '\n\n' + veb_monitor(debug)
+    # response_message += '\n\n' + veb_dolartoday(debug)
+    _ = DEBUG and log_debug("usdveb | " +
+                            f"response_message:\n{response_message}")
     return response_message
 
 
@@ -227,6 +300,7 @@ def usdcop(debug):
     except Exception as err:
         response_message = f'ERROR in usdcop: {err}'
         log_warning(response_message)
+    _ = DEBUG and log_debug(f"usdcop | response_message:\n{response_message}")
     return response_message
 
 
@@ -256,4 +330,5 @@ def veb_cop(currency_pair, debug):
         response_message = 'Exchange rate:' + \
             f' {exchange_rate:.4f} {suffix}.\n' + \
             f'Effective Date: {effective_date}'
+    _ = DEBUG and log_debug(f"veb_cop | response_message:\n{response_message}")
     return response_message
