@@ -29,7 +29,7 @@ inquirer==3.4.0; python_full_version >= '3.8.1'
 jiter==0.10.0; python_version >= '3.9'
 jmespath==1.0.1; python_version >= '3.7'
 markupsafe==3.0.2; python_version >= '3.9'
-monitor-exchange-rates @ git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git@52350aa47154689e69dc3c1e12cf6159202cf5ba
+monitor-exchange-rates @ git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git@dbcb44b679eddeba17abf09921d7e6fe1b38e411
 openai==1.79.0; python_version >= '3.8'
 outcome==1.3.0.post0; python_version >= '3.7'
 passlib[bcrypt]==1.7.4

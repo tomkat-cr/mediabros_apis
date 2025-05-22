@@ -35,10 +35,10 @@ PYTHON3_EXEC='/usr/local/bin/python${PYTHON_VERSION}'
 
 # ..........
 
-deploy_with_sts() {
+deploy_with_sls() {
     local stage="$1"
     echo ""
-    echo "Deploying with STS | Stage: ${stage}"
+    echo "Deploying with SLS | Stage: ${stage}"
     echo ""
 
     echo ""
@@ -54,18 +54,13 @@ deploy_with_sts() {
     cd ${BASE_DIR}
     pwd
 
-    echo ""
-    echo "Removing vendor and build directories..."
-    echo ""
-    rm -rf vendor
-    rm -rf build
-
     if ! sls --version
     then
         echo ""
         echo "Installing serverless..."
         echo ""
-        if ! npm install -g serverless@^3
+        # if ! npm install -g serverless@^3
+        if ! npm install -g serverless
         then
             echo "Error installing serverless" && exit 1
         fi
@@ -74,6 +69,16 @@ deploy_with_sts() {
     echo ""
     echo "Creating mediabros_apis..."
     echo ""
+
+    if [ "${AWS_REGION}" = "" ]; then
+        AWS_REGION="us-east-1"
+    fi
+    export AWS_REGION
+
+    if [ "${BUILD_PATH}" = "" ]; then
+        BUILD_PATH="/tmp/mediabros_apis_build"
+    fi
+
     if [ "${MEDIABROS_APIS_REPO}" = "" ]; then
         MEDIABROS_APIS_REPO="https://github.com/tomkat-cr/mediabros_apis"
     fi
@@ -81,33 +86,64 @@ deploy_with_sts() {
         MEDIABROS_APIS_BRANCH="main"
     fi
 
-    # # If MEDIABROS_APIS_REPO is a remote path, add /tree
-    # if [[ "${MEDIABROS_APIS_REPO}" == *"https://"* ]]; then
-    #     MEDIABROS_APIS_REPO="${MEDIABROS_APIS_REPO}/tree/${MEDIABROS_APIS_BRANCH}"
-    # fi
-
-    if [ "${AWS_REGION}" = "" ]; then
-        AWS_REGION="us-east-1"
+    # If MEDIABROS_APIS_REPO is a remote path, add /tree
+    if [[ "${MEDIABROS_APIS_REPO}" == *"https://"* ]]; then
+        MEDIABROS_APIS_REPO="${MEDIABROS_APIS_REPO}/tree/${MEDIABROS_APIS_BRANCH}"
+        SLS_PARAMETERS="--template-url ${MEDIABROS_APIS_REPO} --path ${BUILD_PATH}"
+    else
+        SLS_PARAMETERS="--template-path ${MEDIABROS_APIS_REPO} --path ${BUILD_PATH}"
     fi
-    export AWS_REGION
 
     echo ""
     echo "MEDIABROS_APIS_REPO: ${MEDIABROS_APIS_REPO}"
     echo "MEDIABROS_APIS_BRANCH: ${MEDIABROS_APIS_BRANCH}"
+    echo "SLS_PARAMETERS: ${SLS_PARAMETERS}"
     echo "AWS_REGION: ${AWS_REGION}"
     echo ""
-    echo "Did you committed all changes to the remote repository?"
-    echo "Press [Enter] key to continue, [Ctrl+C] or [a] to abort..."
-    echo ""
-    read any_key
 
-    if [ "${any_key}" = "a" ]; then
-        echo "Aborting..."
-        run_remove_pat_from_files
-        exit
+    if [[ "${MEDIABROS_APIS_REPO}" == *"https://"* ]]; then
+        echo "Did you committed all changes to the remote repository?"
+        echo "Press [Enter] key to continue, [Ctrl+C] or [a] to abort..."
+        echo ""
+        read any_key
+
+        if [ "${any_key}" = "a" ]; then
+            echo "Aborting..."
+            run_remove_pat_from_files
+            exit
+        fi
     fi
 
-    if ! sls create --template-url "${MEDIABROS_APIS_REPO}" --path build && cd $_
+    echo ""
+    echo "Removing vendor and build directories..."
+    echo ""
+    rm -rf vendor
+    rm -rf build
+    rm -rf ${BUILD_PATH}
+
+
+    if [ "${AWS_ACCOUNT_ID}" = "" ]; then
+        echo ""
+        echo "Getting AWS Account ID..."
+        echo ""
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json --no-paginate | jq -r '.Account')
+    fi
+
+    echo ""
+    echo "Login to ECR. AWS Account ID: ${AWS_ACCOUNT_ID}"
+    echo ""
+
+    if ! AWS_PROFILE=${AWS_PROFILE:-default} aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+    then
+        echo "Error: Failed to authenticate to AWS ECR. Check your AWS credentials and permissions." && exit 1
+    fi
+
+    echo ""
+    echo "Creating mediabros_apis..."
+    echo ""
+
+    # if ! sls create ${SLS_PARAMETERS}
+    if ! sls --app mediabros-apis ${SLS_PARAMETERS}
     then
         echo "Error creating mediabros_apis" && exit 1
     fi
@@ -115,8 +151,9 @@ deploy_with_sts() {
     echo ""
     echo "Deploying mediabros_apis..."
     echo ""
-    cd build
-    if ! sls deploy --stage ${stage}
+
+    # cd ${BUILD_PATH}
+    if ! sls deploy --app mediabros-apis --stage ${stage}
     then
         echo "Error deploying mediabros_apis" && exit 1
     fi
@@ -126,7 +163,7 @@ deploy_with_sts() {
     echo ""
     echo "Invoking mediabros_apis lambda function..."
     echo ""
-    if ! sls invoke --function api --stage ${stage}
+    if ! sls invoke --app mediabros-apis --function api --stage ${stage}
     then
         echo "Error invoking mediabros_apis" && exit 1
     fi
@@ -138,17 +175,25 @@ deploy_with_sts() {
 
     echo ""
     echo "Getting the API Gateway URL..."
-    echo ""
-    API_URL=$(sls info --stage ${stage} | grep "Service endpoint" | awk '{print $3}')
+    echo "" 
+    sls info --app mediabros-apis --stage ${stage} 2>/tmp/sls.txt
+    API_URL=$(perl -ne 'print "$1\n" if /ANY - (https[^\s]+)\s/' /tmp/sls.txt | sed 's|{proxy+}||g' | head -n 1)
     echo "API URL: ${API_URL}"
 
     echo ""
-    echo "Testing the API Gateway: ${API_URL}/api/usdvef"
+    echo "Testing the API Gateway: ${API_URL}/usdvef"
     echo ""
-    if ! curl -X GET "${API_URL}/api/usdvef"
+    
+    # Simple GET request without any special headers
+    if ! curl -v "${API_URL}/usdvef"
     then
-        echo "Error testing the API Gateway" && exit 1
+        echo "Error testing the API Gateway"
+        exit 1
     fi
+    
+    echo ""
+    echo "API Gateway test completed"
+    echo ""
 
     cd ${BASE_DIR}
 }
@@ -174,7 +219,7 @@ run_deploy() {
     if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
         deploy_with_chalice ${stage}
     else
-        deploy_with_sts ${stage}
+        deploy_with_sls ${stage}
     fi
 }
 
@@ -481,8 +526,12 @@ run_pipfile() {
     #     boto3 \
     #     chalice
 
-    load_3rd_party_pakages
-    download_chromedriver
+    if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
+        load_3rd_party_pakages
+        download_chromedriver
+    else
+        install_3rd_party_pakages
+    fi
 
     echo ""
     echo "Installing dependencies..."
@@ -557,8 +606,12 @@ if [ "$1" = "update" ]; then
 fi
 
 if [ "$1" = "update_pakages_only" ]; then
-    load_3rd_party_pakages
-    download_chromedriver
+    if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
+        load_3rd_party_pakages
+        download_chromedriver
+    else
+        install_3rd_party_pakages
+    fi
     exit
 fi
 

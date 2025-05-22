@@ -9,35 +9,31 @@
 #
 # Source: https://github.com/umihico/docker-selenium-lambda/blob/main/Dockerfile
 
-# Envvars for build
-CHROMEDRIVER_VERSION="136.0.7103.113"
-PYTHON_VERSION="3.11"
+FROM public.ecr.aws/lambda/python:3.11 AS build
 
-# FROM public.ecr.aws/lambda/python@sha256:4a4ca5ff3639ba963e218fa66417fbcdfa19a03fd71c5011acf4e4eed542392e as build
-FROM public.ecr.aws/lambda/python:${PYTHON_VERSION} as build
+RUN yum install -y unzip
 
-RUN dnf install -y unzip && \
-    curl -Lo "/tmp/chromedriver-linux64.zip" "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" && \
-    curl -Lo "/tmp/chrome-linux64.zip" "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chrome-linux64.zip" && \
-    unzip /tmp/chromedriver-linux64.zip -d /opt/ && \
-    unzip /tmp/chrome-linux64.zip -d /opt/
+RUN curl -Lo "/tmp/chromedriver-linux64.zip" "https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.113/linux64/chromedriver-linux64.zip"
+RUN curl -Lo "/tmp/chrome-linux64.zip" "https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.113/linux64/chrome-linux64.zip"
 
-FROM public.ecr.aws/lambda/python:${PYTHON_VERSION}
+RUN unzip /tmp/chromedriver-linux64.zip -d /opt/
+RUN unzip /tmp/chrome-linux64.zip -d /opt/
 
-RUN dnf install -y atk cups-libs gtk3 libXcomposite alsa-lib \
+FROM public.ecr.aws/lambda/python:3.11
+
+RUN yum install -y git atk cups-libs gtk3 libXcomposite alsa-lib \
     libXcursor libXdamage libXext libXi libXrandr libXScrnSaver \
     libXtst pango at-spi2-atk libXt xorg-x11-server-Xvfb \
     xorg-x11-xauth dbus-glib dbus-glib-devel nss mesa-libgbm
 
-# RUN pip install selenium==4.32.0
-COPY requirements.txt ./
-RUN pip install -r requirements.txt
+COPY requirements.txt ${LAMBDA_TASK_ROOT}/
+RUN pip install --no-cache-dir -r ${LAMBDA_TASK_ROOT}/requirements.txt
 
 COPY --from=build /opt/chrome-linux64 /opt/chrome
 COPY --from=build /opt/chromedriver-linux64 /opt/chromedriver
 
-# Copy app.py and chalicelib to handler function
-COPY app.py ${LAMBDA_TASK_ROOT}/
+COPY app.py lambda_handler.py ${LAMBDA_TASK_ROOT}/
 COPY chalicelib ${LAMBDA_TASK_ROOT}/chalicelib
 
-CMD [ "app.app" ]
+# Set the CMD to your handler (could also be done in serverless.yml)
+CMD [ "lambda_handler.lambda_handler" ]
