@@ -199,8 +199,10 @@ def veb_bcv(debug):
 
 def veb_monitor(debug):
     api_response = veb_monitor_api()
+    response_message = 'Monitor exchange rate:\n'
     if api_response['error']:
-        return api_response['error_message']
+        response_message += "\n".join(api_response['error_message'])
+        return response_message
     result = api_response['data']
     if debug:
         response_message = f'Monitor exchange rates: {result}'
@@ -212,8 +214,7 @@ def veb_monitor(debug):
         ]
         exchange_rate = "\n".join(exchange_rate)
         from_date = result['data']['effective_date']
-        response_message = 'Monitor exchange rate:\n' + \
-            f'{exchange_rate}\n' + \
+        response_message += f'{exchange_rate}\n' + \
             f'Effective Date: {from_date}'
     _ = DEBUG and log_debug("veb_monitor | " +
                             f"response_message:\n{response_message}")

@@ -1,0 +1,87 @@
+service: mediabros-apis
+
+# Provider configuration
+provider:
+  name: aws
+  stage: ${opt:stage, 'prod'}
+  region: ${env:AWS_REGION, 'us-east-1'}
+  environment:
+    # App configuration
+    APP_NAME: ${env:APP_NAME, 'mediabros-apis'}
+    SERVER_NAME: ${env:SERVER_NAME, '${self:service}@aws'}
+    SECRET_KEY: ${env:SECRET_KEY, ''}
+    ALGORITHM: ${env:ALGORITHM, 'HS256'}
+    ACCESS_TOKEN_EXPIRE_MINUTES: ${env:ACCESS_TOKEN_EXPIRE_MINUTES, '30'}
+    
+    # External APIs
+    TELEGRAM_BOT_TOKEN: ${env:TELEGRAM_BOT_TOKEN, ''}
+    TELEGRAM_CHAT_ID: ${env:TELEGRAM_CHAT_ID, ''}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+    
+    # Database configuration
+    DB_TYPE: ${env:DB_TYPE, 'mongodb'}
+    DB_URI: ${env:DB_URI, ''}
+    DB_NAME: ${env:DB_NAME, ''}
+    
+    # Exchange rates configuration
+    MONITOR_EXCHANGE_URL: ${env:MONITOR_EXCHANGE_URL, ''}
+    VEB_EXCHANGE_URL: ${env:VEB_EXCHANGE_URL, ''}
+    COP_EXCHANGE_URL: ${env:COP_EXCHANGE_URL, ''}
+    
+    # Chrome configuration
+    CHROMEDRIVER_PATH: '/opt/chromedriver'
+    CHROME_PATH: '/opt/chrome'
+
+# Package configuration
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.env*'
+    - '!.git/**'
+    - '!.vscode/**'
+    - '!__pycache__/**'
+
+# Functions configuration
+functions:
+  api:
+    # Use Docker image for Lambda deployment
+    image:
+      name: ${self:service}-lambda-image
+      uri: ${env:ECR_IMAGE_URI}
+      command: ["main.handler"]
+    timeout: 120
+    memorySize: 2048
+    events:
+      # API Gateway configuration
+      - http:
+          path: /{proxy+}
+          method: any
+          cors: true
+
+# Resources configuration for API Gateway and other AWS resources
+resources:
+  Resources:
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${self:service}-${self:provider.stage}
+        Description: API Gateway for ${self:service}
+        EndpointConfiguration:
+          Types:
+            - REGIONAL
+
+# Custom configuration for Docker image build
+custom:
+  dockerizeLambda:
+    dockerfileDir: ./
+    dockerfileName: Dockerfile
+    context: ./
+    buildArgs:
+      # Environment variables for the Dockerfile
+      CHROMEDRIVER_VERSION: ${env:CHROMEDRIVER_VERSION, '136.0.7103.113'}
+      PYTHON_VERSION: ${env:PYTHON_VERSION, '3.11'}
+      MONITOR_EXCHANGE_RATES_BRANCH: ${env:MONITOR_EXCHANGE_RATES_BRANCH, ''}
+      BCV_EXCHANGE_RATES_BRANCH: ${env:BCV_EXCHANGE_RATES_BRANCH, ''}
+      COP_EXCHANGE_RATES_BRANCH: ${env:COP_EXCHANGE_RATES_BRANCH, ''}
+      GITHUB_API_KEY: ${env:GITHUB_API_KEY, ''}

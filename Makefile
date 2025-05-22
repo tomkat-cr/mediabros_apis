@@ -14,6 +14,9 @@ clean:
 update:
 	${SHELL} ./run_aws.sh update
 
+update_pakages_only:
+	${SHELL} ./run_aws.sh update_pakages_only
+
 test:
 	${SHELL} ./run_aws.sh test
 

@@ -1,5 +1,5 @@
 # index.py
-# Project: mediabros_apis
+# FastAPI implementation for Project: mediabros_apis
 # 2023-01-24 | CR
 #
 import logging
@@ -11,10 +11,11 @@ from a2wsgi import ASGIMiddleware
 from pydantic import BaseModel
 
 from chalicelib.utility_password import get_password_hash
-from chalicelib.utility_jwt import Token, login_for_access_token, get_current_active_user
+from chalicelib.utility_jwt import (
+    Token, login_for_access_token, get_current_active_user)
 from chalicelib.utility_date import get_formatted_date
-from chalicelib.utility_general import get_command_line_args, log_endpoint_debug, \
-    log_debug, log_normal
+from chalicelib.utility_general import (
+    get_command_line_args, log_endpoint_debug, log_debug, log_normal)
 from chalicelib.model_users import User
 from chalicelib.api_openai import openai_api_with_defaults
 from chalicelib.api_currency_exchange import crypto, usdcop, usdveb, veb_cop

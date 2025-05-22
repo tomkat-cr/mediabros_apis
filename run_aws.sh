@@ -6,6 +6,9 @@ APP_DIR='chalicelib'
 AWS_STACK_NAME='mediabros-apis-stack'
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo ""
+echo "BASE_DIR: ${BASE_DIR}"
+echo ""
 
 ENV_FILESPEC=""
 if [ -f "./.env" ]; then
@@ -32,6 +35,272 @@ PYTHON3_EXEC='/usr/local/bin/python${PYTHON_VERSION}'
 
 # ..........
 
+deploy_with_sts() {
+    local stage="$1"
+    echo ""
+    echo "Deploying with STS | Stage: ${stage}"
+    echo ""
+
+    echo ""
+    echo "Checking if 3rd party packages are installed..."
+    echo ""
+    if ! grep -q "monitor-exchange-rates" Pipfile
+    then
+        install_3rd_party_pakages
+    fi
+
+    run_requirements_txt
+
+    cd ${BASE_DIR}
+    pwd
+
+    echo ""
+    echo "Removing vendor and build directories..."
+    echo ""
+    rm -rf vendor
+    rm -rf build
+
+    if ! sls --version
+    then
+        echo ""
+        echo "Installing serverless..."
+        echo ""
+        if ! npm install -g serverless@^3
+        then
+            echo "Error installing serverless" && exit 1
+        fi
+    fi
+
+    echo ""
+    echo "Creating mediabros_apis..."
+    echo ""
+    if [ "${MEDIABROS_APIS_REPO}" = "" ]; then
+        MEDIABROS_APIS_REPO="https://github.com/tomkat-cr/mediabros_apis"
+    fi
+    if [ "${MEDIABROS_APIS_BRANCH}" = "" ]; then
+        MEDIABROS_APIS_BRANCH="main"
+    fi
+
+    # # If MEDIABROS_APIS_REPO is a remote path, add /tree
+    # if [[ "${MEDIABROS_APIS_REPO}" == *"https://"* ]]; then
+    #     MEDIABROS_APIS_REPO="${MEDIABROS_APIS_REPO}/tree/${MEDIABROS_APIS_BRANCH}"
+    # fi
+
+    if [ "${AWS_REGION}" = "" ]; then
+        AWS_REGION="us-east-1"
+    fi
+    export AWS_REGION
+
+    echo ""
+    echo "MEDIABROS_APIS_REPO: ${MEDIABROS_APIS_REPO}"
+    echo "MEDIABROS_APIS_BRANCH: ${MEDIABROS_APIS_BRANCH}"
+    echo "AWS_REGION: ${AWS_REGION}"
+    echo ""
+    echo "Did you committed all changes to the remote repository?"
+    echo "Press [Enter] key to continue, [Ctrl+C] or [a] to abort..."
+    echo ""
+    read any_key
+
+    if [ "${any_key}" = "a" ]; then
+        echo "Aborting..."
+        run_remove_pat_from_files
+        exit
+    fi
+
+    if ! sls create --template-url "${MEDIABROS_APIS_REPO}" --path build && cd $_
+    then
+        echo "Error creating mediabros_apis" && exit 1
+    fi
+
+    echo ""
+    echo "Deploying mediabros_apis..."
+    echo ""
+    cd build
+    if ! sls deploy --stage ${stage}
+    then
+        echo "Error deploying mediabros_apis" && exit 1
+    fi
+
+    run_remove_pat_from_files
+
+    echo ""
+    echo "Invoking mediabros_apis lambda function..."
+    echo ""
+    if ! sls invoke --function api --stage ${stage}
+    then
+        echo "Error invoking mediabros_apis" && exit 1
+    fi
+
+    echo ""
+    echo "Waiting for the API Gateway to be ready..."
+    echo ""
+    sleep 10
+
+    echo ""
+    echo "Getting the API Gateway URL..."
+    echo ""
+    API_URL=$(sls info --stage ${stage} | grep "Service endpoint" | awk '{print $3}')
+    echo "API URL: ${API_URL}"
+
+    echo ""
+    echo "Testing the API Gateway: ${API_URL}/api/usdvef"
+    echo ""
+    if ! curl -X GET "${API_URL}/api/usdvef"
+    then
+        echo "Error testing the API Gateway" && exit 1
+    fi
+
+    cd ${BASE_DIR}
+}
+
+deploy_with_chalice() {
+    local stage="$1"
+    set_aws_chromedriver_path
+    create_chalice_config_json_file
+    run_add_pat_to_files
+    # restore_github_pat ${BASE_DIR}/Pipfile
+    # restore_github_pat ${BASE_DIR}/Pipfile.lock
+    # pipenv install
+    run_requirements_txt
+    pipenv run chalice deploy --stage ${stage}
+    run_remove_pat_from_files
+    # mask_github_pat ${BASE_DIR}/requirements.txt
+    # mask_github_pat ${BASE_DIR}/Pipfile
+    # mask_github_pat ${BASE_DIR}/Pipfile.lock
+}
+
+run_deploy() {
+    local stage="$1"
+    if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
+        deploy_with_chalice ${stage}
+    else
+        deploy_with_sts ${stage}
+    fi
+}
+
+set_local_chromedriver_path() {
+    export CHROMEDRIVER_PATH="./vendor/chromedriver-linux64"
+}
+
+set_aws_chromedriver_path() {
+    export CHROMEDRIVER_PATH="/opt/python/lib/python%s.%s/site-packages/chromedriver-linux64"
+}
+
+download_chromedriver() {
+    echo ""
+    echo "Downloading chromedriver..."
+    echo "Please check the following URL to get the latest version:"
+    echo "https://googlechromelabs.github.io/chrome-for-testing/"
+    echo ""
+    if [ "${CHROMEDRIVER_INCLUDE}" = "" ]; then
+        echo "CHROMEDRIVER_INCLUDE is not set, skipping chromedriver download"
+        return
+    fi
+    if [ "${CHROMEDRIVER_VERSION}" = "" ]; then
+        CHROMEDRIVER_VERSION="136.0.7103.94"
+    fi
+    cd ${BASE_DIR}
+    mkdir -p ./vendor
+    cd ./vendor
+    if ! wget "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip"
+    then
+        echo "Error downloading chromedriver" && exit 1
+    fi
+    if ! wget "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chrome-linux64.zip"
+    then
+        echo "Error downloading chrome" && exit 1
+    fi
+    unzip chromedriver-linux64.zip
+    unzip chrome-linux64.zip
+    rm chromedriver-linux64.zip
+    rm chrome-linux64.zip
+    cd ${BASE_DIR}
+}
+
+run_git_clone() {
+    echo ""
+    echo "Cloning ${1}/${2}, branch: ${3}, github api key: ${4}..."
+    echo ""
+    git clone https://${4}@github.com/${1}/${2}.git
+    if [ "$3" != "" ]; then
+        cd ${2}
+        git checkout $3
+        cd ..
+    fi
+    if [ "$5" != "" ]; then
+        mv ${2}/${5} .
+        rm -rf ${2}
+    fi
+}
+
+load_3rd_party_pakages() {
+    echo ""
+    echo "Creating vendor directory..."
+    echo ""
+
+    cd ${BASE_DIR}
+    rm -rf ./vendor
+    mkdir -p ./vendor
+    cd ./vendor
+
+    touch __init__.py
+
+    echo ""
+    echo "Loading 3rd party packages..."
+    echo ""
+
+    run_git_clone tomkat-cr monitor-exchange-rates ${MONITOR_EXCHANGE_RATES_BRANCH} ${GITHUB_API_KEY} monitor_exchange_rates
+    run_git_clone tomkat-cr bcv-exchange-rates ${BCV_EXCHANGE_RATES_BRANCH} ${GITHUB_API_KEY} bcv_exchange_rates
+    run_git_clone tomkat-cr cop-exchange-rates ${COP_EXCHANGE_RATES_BRANCH} ${GITHUB_API_KEY} cop_exchange_rates
+
+    echo ""
+    echo "Checking if 3rd party packages are installed..."
+    echo ""
+    if grep -q "monitor-exchange-rates" Pipfile
+    then
+        uninstall_3rd_party_pakages
+    fi
+
+    cd ${BASE_DIR}
+}
+
+uninstall_3rd_party_pakages() {
+    echo ""
+    echo "Uninstalling 3rd party packages..."
+    echo ""
+    cd ${BASE_DIR}
+    pipenv uninstall \
+        monitor-exchange-rates \
+        bcv-exchange-rates \
+        cop-exchange-rates
+}
+
+install_3rd_party_pakages() {
+    echo ""
+    echo "Installing 3rd party packages..."
+    echo ""
+    cd ${BASE_DIR}
+
+    if [ "${BCV_EXCHANGE_RATES_BRANCH}" != "" ]; then
+        BCV_EXCHANGE_RATES_BRANCH="@${BCV_EXCHANGE_RATES_BRANCH}"
+    fi
+    if [ "${COP_EXCHANGE_RATES_BRANCH}" != "" ]; then
+        COP_EXCHANGE_RATES_BRANCH="@${COP_EXCHANGE_RATES_BRANCH}"
+    fi
+    if [ "${MONITOR_EXCHANGE_RATES_BRANCH}" != "" ]; then
+        MONITOR_EXCHANGE_RATES_BRANCH="@${MONITOR_EXCHANGE_RATES_BRANCH}"
+    fi
+    echo ""
+    echo "Installing monitor-exchange-rates from git branch: ${MONITOR_EXCHANGE_RATES_BRANCH}"
+    echo "Installing bcv-exchange-rates from git branch: ${BCV_EXCHANGE_RATES_BRANCH}"
+    echo "Installing cop-exchange-rates from git branch: ${COP_EXCHANGE_RATES_BRANCH}"
+
+    pipenv install \
+        git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
+        git+https://github.com/tomkat-cr/bcv-exchange-rates${BCV_EXCHANGE_RATES_BRANCH} \
+        git+https://github.com/tomkat-cr/cop-exchange-rates${COP_EXCHANGE_RATES_BRANCH}
+}
+
 create_chalice_config_json_file() {
     echo ""
     echo "Creating chalice config file..."
@@ -45,13 +314,35 @@ create_chalice_config_json_file() {
             # echo "Skipping comment: $var"
             continue
         fi
+
         # Fix the "@" in the ${var} value
         var_value="${!var}"
         var_value=${var_value//"@"/"\\@"}
         # echo "${var}: ${var_value}"
+
         # Replace the placeholder in config.json
         perl -i -pe "s|${var}_placeholder|${var_value}|g" ${CHALICE_DIR}/config.json
     done
+
+    # Replace the placeholder in config.json
+    if [ "${CHROMEDRIVER_INCLUDE}" != "" ]; then
+        if [ "$CHROMEDRIVER_PATH" != "" ]; then
+            echo ""
+            echo "Setting CHROMEDRIVER_PATH in config.json..."
+            echo ""
+            perl -i -pe "s|CHROMEDRIVER_PATH_placeholder|${CHROMEDRIVER_PATH}|g" ${CHALICE_DIR}/config.json
+        else
+            echo ""
+            echo "Leaving CHROMEDRIVER_PATH placeholder empty in config.json [1]..."
+            echo ""
+            perl -i -pe "s|CHROMEDRIVER_PATH_placeholder||g" ${CHALICE_DIR}/config.json
+        fi
+    else
+        echo ""
+        echo "Leaving CHROMEDRIVER_PATH placeholder empty in config.json [2]..."
+        echo ""
+        perl -i -pe "s|CHROMEDRIVER_PATH_placeholder||g" ${CHALICE_DIR}/config.json
+    fi
 }
 
 run_clean() {
@@ -86,25 +377,45 @@ run_clean() {
     echo ""
 }
 
-replace_github_pat() {
+mask_github_pat() {
+    local file="$1"
+    local string_to_replace="$2"
+    if [ "${string_to_replace}" = "" ]; then
+        string_to_replace="github_pat_"
+    fi
+    local envvar_name="$3"
+    if [ "${envvar_name}" = "" ]; then
+        envvar_name="GITHUB_API_KEY"
+    fi
+    local envvar_value="${!envvar_name}"
     echo ""
-    echo "Replacing Github PAT in $1 by the string \${GITHUB_API_KEY}..."
+    echo "Masking Github PAT in '$file' (${envvar_name}: ${envvar_value})..."
     echo ""
-    perl -i -pe "s|github_pat_[^@]*|\\$\{GITHUB_API_KEY}|g" $1
+    # perl -i -pe "s|github_pat_[^@]*|\\$\{GITHUB_API_KEY}|g" $1
+    perl -i -pe "s|${string_to_replace}[^@]*|\\$\{${envvar_name}}|g" $file
 }
 
 restore_github_pat() {
+    local file="$1"
+    local envvar_name="$2"
+    if [ "${envvar_name}" = "" ]; then
+        envvar_name="GITHUB_API_KEY"
+    fi
+    local envvar_value="${!envvar_name}"
     echo ""
-    echo "Restoring Github PAT in $1..."
+    echo "Restoring Github PAT in '$file' (${envvar_name}: ${envvar_value})..."
     echo ""
-    perl -i -pe "s|\\$\{GITHUB_API_KEY}[^@]*|${GITHUB_API_KEY}|g" $1
+    # perl -i -pe "s|\\$\{GITHUB_API_KEY}[^@]*|${GITHUB_API_KEY}|g" $1
+    perl -i -pe "s|\\$\{${envvar_name}}[^@]*|${envvar_value}|g" $file
 }
 
 run_requirements_txt() {
     echo ""
     echo "Generating requirements.txt..."
     echo ""
+    rm -f ${BASE_DIR}/requirements.txt
     pipenv requirements > ${BASE_DIR}/requirements.txt
+    restore_github_pat ${BASE_DIR}/requirements.txt
 }
 
 run_pipfile() {
@@ -130,25 +441,10 @@ run_pipfile() {
     # # https://realpython.com/intro-to-pyenv/
     # pipenv --python $(cat ${BASE_DIR}/.python-version)
 
-    if [ "${BCV_EXCHANGE_RATES_BRANCH}" != "" ]; then
-        BCV_EXCHANGE_RATES_BRANCH="@${BCV_EXCHANGE_RATES_BRANCH}"
-    fi
-    if [ "${COP_EXCHANGE_RATES_BRANCH}" != "" ]; then
-        COP_EXCHANGE_RATES_BRANCH="@${COP_EXCHANGE_RATES_BRANCH}"
-    fi
-    if [ "${MONITOR_EXCHANGE_RATES_BRANCH}" != "" ]; then
-        MONITOR_EXCHANGE_RATES_BRANCH="@${MONITOR_EXCHANGE_RATES_BRANCH}"
-    fi
-
     echo ""
     echo "Restoring Github PAT in Pipfile..."
     echo ""
     restore_github_pat ${BASE_DIR}/Pipfile
-
-    echo ""
-    echo "Installing monitor-exchange-rates from git branch: ${MONITOR_EXCHANGE_RATES_BRANCH}"
-    echo "Installing bcv-exchange-rates from git branch: ${BCV_EXCHANGE_RATES_BRANCH}"
-    echo "Installing cop-exchange-rates from git branch: ${COP_EXCHANGE_RATES_BRANCH}"
 
     # echo ""
     # echo "Installing dependencies..."
@@ -185,13 +481,14 @@ run_pipfile() {
     #     boto3 \
     #     chalice
 
+    load_3rd_party_pakages
+    download_chromedriver
+
     echo ""
     echo "Installing dependencies..."
     echo ""
+
     pipenv install \
-        git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
-        git+https://github.com/tomkat-cr/bcv-exchange-rates${BCV_EXCHANGE_RATES_BRANCH} \
-        git+https://github.com/tomkat-cr/cop-exchange-rates${COP_EXCHANGE_RATES_BRANCH} \
         requests \
         openai \
         "python-jose[cryptography]" \
@@ -203,22 +500,41 @@ run_pipfile() {
         pymongo \
         werkzeug \
         boto3 \
-        chalice
+        chalice \
+        beautifulsoup4 \
+        cloudscraper \
+        selenium
 
     run_requirements_txt
 
-    echo ""
-    echo "Replacing Github PAT in requirements.txt with perl by the string \${GITHUB_API_KEY}..."
-    echo ""
-    replace_github_pat ${BASE_DIR}/requirements.txt
-
-    echo ""
-    echo "Replacing Github PAT in Pipfile with perl by the string \${GITHUB_API_KEY}..."
-    echo ""
-    replace_github_pat ${BASE_DIR}/Pipfile
+    run_remove_pat_from_files
 
     echo ""
     echo "Done..."
+}
+
+run_add_pat_to_files() {
+    echo ""
+    echo "Adding Github PAT to requirements.txt..."
+    echo ""
+    restore_github_pat ${BASE_DIR}/requirements.txt
+
+    echo ""
+    echo "Adding Github PAT to Pipfile..."
+    echo ""
+    restore_github_pat ${BASE_DIR}/Pipfile
+}
+
+run_remove_pat_from_files() {
+    echo ""
+    echo "Removing Github PAT from requirements.txt..."
+    echo ""
+    mask_github_pat ${BASE_DIR}/requirements.txt
+
+    echo ""
+    echo "Removing Github PAT from Pipfile..."
+    echo ""
+    mask_github_pat ${BASE_DIR}/Pipfile
 }
 
 # ..........
@@ -234,9 +550,15 @@ if [ "$1" = "clean" ]; then
 fi
 
 if [ "$1" = "update" ]; then
-    run_clean
-    rm -rf ${BASE_DIR}/requirements.txt
+    # run_clean
+    pipenv --rm
     run_pipfile
+    exit
+fi
+
+if [ "$1" = "update_pakages_only" ]; then
+    load_3rd_party_pakages
+    download_chromedriver
     exit
 fi
 
@@ -249,25 +571,23 @@ if [[ "$1" = "test" ]]; then
 fi
 
 if [[ "$1" = "run" || "$1" = "" ]]; then
+    set_local_chromedriver_path
     create_chalice_config_json_file
     pipenv run chalice local --port ${PORT}
     exit
 fi
 
 if [ "$1" = "deploy" ]; then
-    create_chalice_config_json_file
-    pipenv requirements > ${BASE_DIR}/requirements.txt
-    pipenv run chalice deploy --stage dev
+    run_deploy dev
     exit
 fi
 if [ "$1" = "deploy_prod" ]; then
-    create_chalice_config_json_file
-    pipenv requirements > ${BASE_DIR}/requirements.txt
-    pipenv run chalice deploy --stage prod
+    run_deploy prod
     exit
 fi
 
 if [ "$1" = "create_stack" ]; then
+    set_aws_chromedriver_path
     create_chalice_config_json_file
     aws cloudformation deploy --template-file "${APP_DIR}/.chalice/dynamodb_cf_template.yaml" --stack-name "${AWS_STACK_NAME}"
     # aws cloudformation describe-stack-events --stack-name "${AWS_STACK_NAME}"
@@ -275,6 +595,7 @@ if [ "$1" = "create_stack" ]; then
 fi
 
 if [ "$1" = "delete_app" ]; then
+    set_aws_chromedriver_path
     create_chalice_config_json_file
     # Delete application
     pipenv run chalice delete
@@ -283,6 +604,7 @@ fi
 
 if [ "$1" = "delete_stack" ]; then
     # Delete DynamoDb table
+    set_aws_chromedriver_path
     create_chalice_config_json_file
     aws cloudformation delete-stack --stack-name "${AWS_STACK_NAME}"
     exit
@@ -290,13 +612,16 @@ fi
 
 if [ "$1" = "install" ]; then
     # Install dependencies
+    run_add_pat_to_files
     pipenv install
+    run_remove_pat_from_files
     exit
 fi
 
 if [ "$1" = "requirements" ]; then
     # Install dependencies from requirements.txt
     run_requirements_txt
+    mask_github_pat ${BASE_DIR}/requirements.txt
     exit
 fi
 

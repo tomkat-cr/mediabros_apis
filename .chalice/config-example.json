@@ -1,6 +1,7 @@
 {
   "version": "2.0",
   "app_name": "mediabros-apis",
+  "automatic_layer": true,
   "environment_variables": {
     "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN_placeholder",
     "TELEGRAM_CHAT_ID": "TELEGRAM_CHAT_ID_placeholder",
@@ -21,16 +22,25 @@
     "BCV_EXCHANGE_RATES_BRANCH": "BCV_EXCHANGE_RATES_BRANCH_placeholder",
     "COP_EXCHANGE_RATES_BRANCH": "COP_EXCHANGE_RATES_BRANCH_placeholder",
     "MONITOR_EXCHANGE_RATES_BRANCH": "MONITOR_EXCHANGE_RATES_BRANCH_placeholder",
-    "GITHUB_API_KEY": "GITHUB_API_KEY_placeholder"
+    "CHROMEDRIVER_PATH": "CHROMEDRIVER_PATH_placeholder",
+    "CHROME_PATH": "CHROME_PATH_placeholder"
   },
   "stages": {
     "dev": {
       "api_gateway_stage": "api-dev",
-      "autogen_policy": false
+      "autogen_policy": false,
+      "environment_variables": {
+        "CHROMEDRIVER_PATH": "CHROMEDRIVER_PATH_placeholder",
+        "CHROME_PATH": "CHROME_PATH_placeholder"
+      }
     },
     "prod": {
       "api_gateway_stage": "api",
-      "autogen_policy": false
+      "autogen_policy": false,
+      "environment_variables": {
+        "CHROMEDRIVER_PATH": "/opt/python/lib/python%s.%s/site-packages/chromedriver-linux64",
+        "CHROME_PATH": "/opt/python/lib/python%s.%s/site-packages/chrome-linux64"
+      }
     }
   }
 }

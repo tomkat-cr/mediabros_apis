@@ -148,3 +148,5 @@ chalicelib/src
 
 config.json
 Pipfile.lock
+vendor
+build
