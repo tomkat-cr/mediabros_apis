@@ -505,5 +505,5 @@ def endpoint_crypto(symbol: str, debug: int):
 
 @app.route("/crypto_wc/{symbol}/{currency}/{debug}")
 def endpoint_crypto_curr(symbol: str, currency: str, debug: int):
-    log_endpoint_debug(f'/crypto/{symbol}/{currency}/{debug}')
+    log_endpoint_debug(f'/crypto_wc/{symbol}/{currency}/{debug}')
     return crypto(symbol, currency, debug == "1")

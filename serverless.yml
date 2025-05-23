@@ -135,6 +135,10 @@ functions:
           method: GET
           cors: true
       - http:
+          path: /crypto_wc/{symbol}/{currency}/{debug}
+          method: GET
+          cors: true
+      - http:
           path: /ai
           method: POST
           cors: true

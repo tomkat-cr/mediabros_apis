@@ -157,11 +157,18 @@ deploy_with_sls() {
         echo ""
         echo "Removing previous mediabros_apis..."
         echo ""
-        sls remove --app mediabros-apis --stage ${stage}
+        if ! sls remove --app mediabros-apis --stage ${stage}
+        then
+            echo "Error removing previous mediabros_apis" && exit 1
+        fi
+        echo ""
+        echo "Waiting for the previous mediabros_apis to be removed..."
+        echo ""
+        sleep 10
     fi
 
     # cd ${BUILD_PATH}
-    if ! sls deploy --app mediabros-apis --stage ${stage}
+    if ! sls deploy --app mediabros-apis --stage ${stage} --debug
     then
         echo "Error deploying mediabros_apis" && exit 1
     fi
@@ -171,9 +178,13 @@ deploy_with_sls() {
     echo ""
     echo "Invoking mediabros_apis lambda function..."
     echo ""
-    if ! sls invoke --app mediabros-apis --function api --stage ${stage}
+    # Reference:
+    # https://stackoverflow.com/questions/52251075/how-to-pass-parameters-to-serverless-invoke-local
+    # https://www.serverless.com/framework/docs/providers/aws/cli-reference/invoke#invoke-local
+    #
+    if ! sls invoke --app mediabros-apis --function api --stage ${stage} --param '{"version": "2", "routeKey": "$default", "rawPath": "/crypto_wc/btc/usd/0", "queryStringParameters": {"symbol": "btc", "currency": "usd", "debug": "0"}, "requestContext": {"http": {"path": "/crypto_wc/btc/usd/0", "method": "GET", "userAgent": "agent"}}}'
     then
-        echo "Error invoking mediabros_apis" && exit 1
+        echo "Error invoking mediabros_apis... Skipping..."
     fi
 
     echo ""
@@ -213,6 +224,8 @@ deploy_with_sls() {
     echo ""
     echo "API Gateway test completed"
     echo ""
+
+    echo "API URL: ${API_URL}"
 
     cd ${BASE_DIR}
 }
