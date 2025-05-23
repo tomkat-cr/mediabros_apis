@@ -26,8 +26,14 @@ run:
 deploy:
 	${SHELL} ./run_aws.sh deploy
 
+deploy_reset:
+	REMOVE_PREVIOUS=1 ${SHELL} ./run_aws.sh deploy
+
 deploy_prod:
 	${SHELL} ./run_aws.sh deploy_prod
+
+deploy_prod_reset:
+	REMOVE_PREVIOUS=1 ${SHELL} ./run_aws.sh deploy_prod
 
 create_stack:
 	${SHELL} ./run_aws.sh create_stack

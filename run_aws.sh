@@ -37,8 +37,9 @@ PYTHON3_EXEC='/usr/local/bin/python${PYTHON_VERSION}'
 
 deploy_with_sls() {
     local stage="$1"
+    local remove_previous="$2"
     echo ""
-    echo "Deploying with SLS | Stage: ${stage}"
+    echo "Deploying with SLS | Stage: ${stage} | Remove previous: ${remove_previous}"
     echo ""
 
     echo ""
@@ -152,6 +153,13 @@ deploy_with_sls() {
     echo "Deploying mediabros_apis..."
     echo ""
 
+    if [ "${remove_previous}" = "1" ]; then
+        echo ""
+        echo "Removing previous mediabros_apis..."
+        echo ""
+        sls remove --app mediabros-apis --stage ${stage}
+    fi
+
     # cd ${BUILD_PATH}
     if ! sls deploy --app mediabros-apis --stage ${stage}
     then
@@ -178,14 +186,25 @@ deploy_with_sls() {
     echo "" 
     sls info --app mediabros-apis --stage ${stage} 2>/tmp/sls.txt
     API_URL=$(perl -ne 'print "$1\n" if /ANY - (https[^\s]+)\s/' /tmp/sls.txt | sed 's|{proxy+}||g' | head -n 1)
+
+    if [ "${API_URL}" = "" ]; then
+        API_URL=$(perl -ne 'print "$1\n" if /GET - (https[^\s]+)\s/' /tmp/sls.txt | sed 's|{proxy+}||g' | head -n 1)
+    else
+        API_URL="${API_URL%?}/usdvef/1"
+    fi
+
+    if [ "${API_URL}" = "" ]; then
+        echo "Error getting API Gateway URL" && exit 1
+    fi
+    
     echo "API URL: ${API_URL}"
 
     echo ""
-    echo "Testing the API Gateway: ${API_URL}/usdvef"
+    echo "Testing the API Gateway: ${API_URL}"
     echo ""
     
     # Simple GET request without any special headers
-    if ! curl -v "${API_URL}/usdvef"
+    if ! curl -v "${API_URL}"
     then
         echo "Error testing the API Gateway"
         exit 1
@@ -219,7 +238,7 @@ run_deploy() {
     if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
         deploy_with_chalice ${stage}
     else
-        deploy_with_sls ${stage}
+        deploy_with_sls ${stage} ${REMOVE_PREVIOUS}
     fi
 }
 
