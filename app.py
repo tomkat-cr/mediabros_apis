@@ -2,7 +2,10 @@
 # Chalice implementation for project: mediabros_apis
 # 2023-02-04 | CR
 #
-import cgi
+
+# import cgi
+from email.message import Message
+
 from io import BytesIO
 import logging
 from typing import Union
@@ -28,7 +31,8 @@ from chalicelib.utility_date import get_formatted_date
 from chalicelib.utility_general import log_endpoint_debug, \
     log_debug, log_normal
 from chalicelib.api_openai import openai_api_with_defaults
-from chalicelib.api_currency_exchange import crypto, usdcop, usdveb, veb_cop
+from chalicelib.api_currency_exchange import (
+    crypto, usdcop, usdveb, veb_cop, usdveb_full, usdveb_monitor)
 
 
 logging.basicConfig(
@@ -74,9 +78,34 @@ def _get_parts():
     """
     rfile = BytesIO(app.current_request.raw_body)
     content_type = app.current_request.headers['content-type']
-    _, parameters = cgi.parse_header(content_type)
+
+    """
+    DeprecationWarning: 'cgi' is deprecated and slated for removal
+    in Python 3.13
+    Reference: https://peps.python.org/pep-0594/#cgi
+    Alternative methods:
+    - parse_header with email.message.Message (see example below)
+    - parse_multipart with email.message.Message (same MIME RFCs)
+    """
+
+    # _, parameters = cgi.parse_header(content_type)
+    msg = Message()
+    msg['content-type'] = content_type
+    parameters = msg.get_params()
     parameters['boundary'] = parameters['boundary'].encode('utf-8')
-    parsed = cgi.parse_multipart(rfile, parameters)
+
+    # parsed = cgi.parse_multipart(rfile, parameters)
+    msg = Message()
+    msg['content-type'] = content_type
+    msg.set_payload(rfile.read())
+    parsed = {}
+    for part in msg.walk():
+        if part.get_content_maintype() == 'multipart':
+            continue
+        name = part.get_param('name', header='content-disposition')
+        if name:
+            parsed[name] = [part.get_payload(decode=True)]
+
     return parsed
 
 
@@ -304,7 +333,7 @@ class UserData(BaseModel):
            content_types=['multipart/form-data'])
 def login_for_access_token_endpoint():
     log_endpoint_debug('/token')
-    log_debug('antes de tomar form_data!')
+    log_debug('Before get form_data!')
     form_data = get_multipart_form_data()
     log_debug(f'form_data: {form_data}')
     user_data = UserData(
@@ -431,16 +460,40 @@ def endpoint_usdcop(debug: int):
     return usdcop(debug == "1")
 
 
-@app.route("/usdvef", methods=['GET'])
-def endpoint_usdvef_plain():
-    log_endpoint_debug('/usdvef')
+@app.route("/usdveb", methods=['GET'])
+def endpoint_usdveb_plain():
+    log_endpoint_debug('/usdveb')
     return usdveb(False)
 
 
-@app.route("/usdvef/{debug}", methods=['GET'])
-def endpoint_usdvef(debug: int):
-    log_endpoint_debug(f'/usdvef/{debug}')
+@app.route("/usdveb/{debug}", methods=['GET'])
+def endpoint_usdveb(debug: int):
+    log_endpoint_debug(f'/usdveb/{debug}')
     return usdveb(debug == "1")
+
+
+@app.route("/usdveb_full", methods=['GET'])
+def endpoint_usdveb_full_plain():
+    log_endpoint_debug('/usdveb_full')
+    return usdveb_full(False)
+
+
+@app.route("/usdveb_full/{debug}", methods=['GET'])
+def endpoint_usdveb_full(debug: int):
+    log_endpoint_debug(f'/usdveb_full/{debug}')
+    return usdveb_full(debug == "1")
+
+
+@app.route("/usdveb_monitor", methods=['GET'])
+def endpoint_usdveb_monitor_plain():
+    log_endpoint_debug('/usdveb_monitor')
+    return usdveb_monitor(False)
+
+
+@app.route("/usdveb_monitor/{debug}", methods=['GET'])
+def endpoint_usdveb_monitor(debug: int):
+    log_endpoint_debug(f'/usdveb_monitor/{debug}')
+    return usdveb_monitor(debug == "1")
 
 
 @app.route("/copveb", methods=['GET'])

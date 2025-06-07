@@ -24,6 +24,8 @@ bcv-exchange-rates = {ref = "develop", git = "https://github.com/tomkat-cr/bcv-e
 cop-exchange-rates = {ref = "develop", git = "https://github.com/tomkat-cr/cop-exchange-rates"}
 
 [dev-packages]
+pytest = "*"
+pytest-chalice = "*"
 
 [requires]
 python_version = "3.11"

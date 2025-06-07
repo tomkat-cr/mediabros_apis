@@ -18,7 +18,10 @@ update_pakages_only:
 	${SHELL} ./run_aws.sh update_pakages_only
 
 test:
-	${SHELL} ./run_aws.sh test
+	# E.g.
+	# make test  # Run all tests
+	# FILTER=tests/test_invalid_endpoints.py make test
+	${SHELL} ./run_aws.sh test ${FILTER}
 
 run:
 	${SHELL} ./run_aws.sh

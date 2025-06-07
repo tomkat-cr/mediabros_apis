@@ -618,6 +618,37 @@ run_remove_pat_from_files() {
     mask_github_pat ${BASE_DIR}/Pipfile
 }
 
+run_tests() {
+    local file_filter="$1"
+    echo ""
+    echo "Running pipenv install --dev to install/update dependencies..."
+    echo ""
+    if ! pytest --version; then
+        pipenv install --dev
+    fi
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "Error: pipenv install --dev failed."
+        echo ""
+        exit 1
+    fi
+    echo ""
+    echo "Test dependencies installed successfully."
+    echo ""
+    echo "Running pytest within pipenv environment..."
+    echo ""
+    pipenv run pytest $file_filter
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "Error: pytest failed."
+        echo ""
+        exit 1
+    fi
+    echo ""
+    echo "Tests passed successfully."
+    echo ""
+}
+
 # ..........
 
 if [ "$1" = "pipfile" ]; then
@@ -648,10 +679,7 @@ if [ "$1" = "update_pakages_only" ]; then
 fi
 
 if [[ "$1" = "test" ]]; then
-    # echo "Error: no test specified" && exit 1
-    echo "Run test..."
-    python -m pytest
-    echo "Done..."
+    run_tests $2
     exit
 fi
 

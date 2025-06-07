@@ -222,6 +222,7 @@ def veb_monitor(debug):
 
 
 def veb_dolartoday(debug):
+    # DEPRECATED
     api_response = veb_dolartoday_api()
     if api_response['error']:
         return api_response['error_message']
@@ -241,9 +242,23 @@ def veb_dolartoday(debug):
 
 def usdveb(debug):
     response_message = veb_bcv(debug)
+    _ = DEBUG and log_debug("usdveb | " +
+                            f"response_message:\n{response_message}")
+    return response_message
+
+
+def usdveb_monitor(debug):
+    response_message = veb_monitor(debug)
+    _ = DEBUG and log_debug("usdveb_monitor | " +
+                            f"response_message:\n{response_message}")
+    return response_message
+
+
+def usdveb_full(debug):
+    response_message = veb_bcv(debug)
     response_message += '\n\n' + veb_monitor(debug)
     # response_message += '\n\n' + veb_dolartoday(debug)
-    _ = DEBUG and log_debug("usdveb | " +
+    _ = DEBUG and log_debug("usdveb_full | " +
                             f"response_message:\n{response_message}")
     return response_message
 
