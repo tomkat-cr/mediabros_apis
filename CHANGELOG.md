@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.1.0 (2025-07-27)
+## 1.1.0 (2025-07-28)
 ---
 
 ### New
@@ -50,6 +50,7 @@ Update dependencies to latest versions to fix Snyk alerts.
 Replace eventual Github PAT in Pipfile and requirements.txt.
 "make deploy_prod" by creating the missing ".chalice/policy-prod.json" file.
 Proper error handling to veb_monitor().
+Fix: convert debug param to string before comparison in endpoint handlers
 
 ### Breaks
 The /usdveb command does not include the DolarToday data and API call because it was deprecated.

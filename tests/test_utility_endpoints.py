@@ -38,7 +38,6 @@ def test_query_params_endpoint_not_authenticated(client,
     the entire dictionary of query parameters from the request.
     """
     response = client.get('/query_params?q=test&p=5')
-    print(f'>>> response.json_body: {response.json_body}')
     assert response.status_code == 200
     assert response.json_body == {
         'query_params': {

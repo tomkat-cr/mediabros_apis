@@ -163,7 +163,7 @@ def endpoint_usdveb_full_plain():
 @api.get("/usdveb_full/{debug}")
 def endpoint_usdveb_full(debug: int):
     log_endpoint_debug(f'/usdveb_full/{debug}')
-    return usdveb_full(debug == "1")
+    return usdveb_full(str(debug) == "1")
 
 
 @api.get("/usdveb_monitor")
@@ -175,7 +175,7 @@ def endpoint_usdveb_monitor_plain():
 @api.get("/usdveb_monitor/{debug}")
 def endpoint_usdveb_monitor(debug: int):
     log_endpoint_debug(f'/usdveb_monitor/{debug}')
-    return usdveb_monitor(debug == "1")
+    return usdveb_monitor(str(debug) == "1")
 
 
 @api.get("/copveb")

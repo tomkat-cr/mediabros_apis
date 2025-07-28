@@ -486,11 +486,7 @@ def test_requires_auth_failure(mock_get_token_auth_header):
 
             @requires_auth  # Decorator from app.py
             def protected_route_direct_fail():
-                print('>> Protected_route_direct_fail called')
                 return {"message": "should_not_reach"}
-
-            # with pytest.raises(AuthError) as excinfo:
-            #     protected_route_direct_fail()
 
             result = protected_route_direct_fail()
 

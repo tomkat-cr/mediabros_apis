@@ -496,7 +496,7 @@ def endpoint_usdcop_plain():
 @app.route("/usdcop/{debug}", methods=['GET'])
 def endpoint_usdcop(debug: int):
     log_endpoint_debug(f'/usdcop/{debug}')
-    return usdcop(debug == "1")
+    return usdcop(str(debug) == "1")
 
 
 @app.route("/usdveb", methods=['GET'])
@@ -508,7 +508,7 @@ def endpoint_usdveb_plain():
 @app.route("/usdveb/{debug}", methods=['GET'])
 def endpoint_usdveb(debug: int):
     log_endpoint_debug(f'/usdveb/{debug}')
-    return usdveb(debug == "1")
+    return usdveb(str(debug) == "1")
 
 
 @app.route("/usdveb_full", methods=['GET'])
@@ -520,7 +520,7 @@ def endpoint_usdveb_full_plain():
 @app.route("/usdveb_full/{debug}", methods=['GET'])
 def endpoint_usdveb_full(debug: int):
     log_endpoint_debug(f'/usdveb_full/{debug}')
-    return usdveb_full(debug == "1")
+    return usdveb_full(str(debug) == "1")
 
 
 @app.route("/usdveb_monitor", methods=['GET'])
@@ -532,7 +532,7 @@ def endpoint_usdveb_monitor_plain():
 @app.route("/usdveb_monitor/{debug}", methods=['GET'])
 def endpoint_usdveb_monitor(debug: int):
     log_endpoint_debug(f'/usdveb_monitor/{debug}')
-    return usdveb_monitor(debug == "1")
+    return usdveb_monitor(str(debug) == "1")
 
 
 @app.route("/copveb", methods=['GET'])
@@ -544,7 +544,7 @@ def endpoint_copveb_plain():
 @app.route("/copveb/{debug}")
 def endpoint_copveb(debug: int):
     log_endpoint_debug(f'/copveb/{debug}')
-    return veb_cop('copveb', debug == "1")
+    return veb_cop('copveb', str(debug) == "1")
 
 
 @app.route("/vebcop", methods=['GET'])
@@ -556,7 +556,7 @@ def endpoint_vebcop_plain():
 @app.route("/vebcop/{debug}", methods=['GET'])
 def endpoint_vebcop(debug: int):
     log_endpoint_debug(f'/vebcop/{debug}')
-    return veb_cop('vebcop', debug == "1")
+    return veb_cop('vebcop', str(debug) == "1")
 
 
 @app.route("/btc", methods=['GET'])
@@ -568,7 +568,7 @@ def endpoint_btc_plain():
 @app.route("/btc/{debug}", methods=['GET'])
 def endpoint_btc(debug: int):
     log_endpoint_debug(f'/btc/{debug}')
-    return crypto('btc', 'usd', debug == "1")
+    return crypto('btc', 'usd', str(debug) == "1")
 
 
 @app.route("/eth", methods=['GET'])
@@ -580,7 +580,7 @@ def endpoint_eth_plain():
 @app.route("/eth/{debug}", methods=['GET'])
 def endpoint_eth(debug: int):
     log_endpoint_debug(f'/eth/{debug}')
-    return crypto('eth', 'usd', debug == "1")
+    return crypto('eth', 'usd', str(debug) == "1")
 
 
 @app.route("/crypto/{symbol}", methods=['GET'])
@@ -592,10 +592,10 @@ def endpoint_crypto_plain(symbol: str):
 @app.route("/crypto/{symbol}/{debug}", methods=['GET'])
 def endpoint_crypto(symbol: str, debug: int):
     log_endpoint_debug(f'/crypto/{symbol}/{debug}')
-    return crypto(symbol, 'usd', debug == "1")
+    return crypto(symbol, 'usd', str(debug) == "1")
 
 
 @app.route("/crypto_wc/{symbol}/{currency}/{debug}")
 def endpoint_crypto_curr(symbol: str, currency: str, debug: int):
     log_endpoint_debug(f'/crypto_wc/{symbol}/{currency}/{debug}')
-    return crypto(symbol, currency, debug == "1")
+    return crypto(symbol, currency, str(debug) == "1")
