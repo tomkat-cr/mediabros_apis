@@ -4,9 +4,8 @@
 #
 
 # import cgi
-from email.message import Message
+import email
 
-from io import BytesIO
 import logging
 from typing import Union
 from urllib.request import urlopen
@@ -17,7 +16,6 @@ import http.client
 
 from chalice import Chalice, Response
 import boto3
-# from boto3.dynamodb.conditions import Key
 from jose import jwt
 from fastapi import HTTPException
 
@@ -50,7 +48,7 @@ log_normal(f'Mediabros APIs started [AWS Lambda]. {get_formatted_date()}')
 
 
 def error_msg_formatter(e, error_code):
-    return 'ERROR: '+str(e) + ' ['+error_code+']'
+    return 'ERROR: ' + str(e) + ' ['+error_code+']'
 
 
 def jsonify(*args, **kwargs):
@@ -62,50 +60,56 @@ def jsonify(*args, **kwargs):
     Reference:
     https://stackoverflow.com/questions/7907596/json-dumps-vs-flask-jsonify
     """
-    return app.response_class(
-        json.dumps(
+    headers = kwargs.pop('headers', {})
+    if 'Content-Type' not in headers:
+        headers['Content-Type'] = 'application/json'
+
+    # Extract status_code if passed, default to 200
+    status_code = kwargs.pop('status_code', 200)
+
+    return Response(
+        body=json.dumps(
             dict(*args, **kwargs),
             indent=None if app.current_request.is_xhr else 2
         ),
-        mimetype='application/json'
+        headers=headers,
+        status_code=status_code
     )
 
 
 def _get_parts():
-    """This allows to get the form's input fields
-    for a multipart/form_data.
+    """Get the form's input fields for multipart/form-data.
     Reference: https://github.com/aws/chalice/issues/796
     """
-    rfile = BytesIO(app.current_request.raw_body)
-    content_type = app.current_request.headers['content-type']
+    content_type = app.current_request.headers.get('content-type', '')
+    if not content_type.startswith('multipart/form-data'):
+        return {}
 
-    """
-    DeprecationWarning: 'cgi' is deprecated and slated for removal
-    in Python 3.13
-    Reference: https://peps.python.org/pep-0594/#cgi
-    Alternative methods:
-    - parse_header with email.message.Message (see example below)
-    - parse_multipart with email.message.Message (same MIME RFCs)
-    """
+    boundary_array = content_type.split('boundary=')
+    if len(boundary_array) != 2:
+        raise Exception('No boundary found in content-type header [1]')
 
-    # _, parameters = cgi.parse_header(content_type)
-    msg = Message()
-    msg['content-type'] = content_type
-    parameters = msg.get_params()
-    parameters['boundary'] = parameters['boundary'].encode('utf-8')
+    boundary = boundary_array[1]
+    if not boundary:
+        raise Exception('No boundary found in content-type header [2]')
 
-    # parsed = cgi.parse_multipart(rfile, parameters)
-    msg = Message()
-    msg['content-type'] = content_type
-    msg.set_payload(rfile.read())
+    body = app.current_request.raw_body
+    data = email.parser.BytesParser().parsebytes(body)
+
+    # Get the email message from the raw body separating the boundaries
+    # Reference: https://docs.python.org/3/library/email.parser.html
+
     parsed = {}
-    for part in msg.walk():
+    for part in data.walk():
         if part.get_content_maintype() == 'multipart':
             continue
         name = part.get_param('name', header='content-disposition')
         if name:
-            parsed[name] = [part.get_payload(decode=True)]
-
+            payload = part.get_payload(decode=True)
+            if name in parsed:
+                parsed[name].append(payload)
+            else:
+                parsed[name] = [payload]
     return parsed
 
 
@@ -134,13 +138,18 @@ def http_response(status_code, detail, headers):
     HTTPResponse with status different than 200, without
     a 'raise' and therefore a HTTP error 500...
     """
+    # Ensure headers is a dict
+    final_headers = headers.copy() if headers is not None else {}
+    if 'Content-Type' not in final_headers:
+        final_headers['Content-Type'] = 'application/json'
+
     return Response(
         body={
-            "code": status_code,
-            "detail": detail,
+            'code': status_code,
+            'detail': detail
         },
-        status_code=status_code,
-        headers=headers
+        headers=final_headers,
+        status_code=status_code
     )
 
 
@@ -154,9 +163,7 @@ class AuthError(Exception):
 
 
 def handle_auth_error(ex):
-    response = jsonify(ex.error)
-    response.status_code = ex.status_code
-    return response
+    return jsonify(ex.error, status_code=ex.status_code)
 
 
 def get_token_auth_header():
@@ -201,8 +208,18 @@ def requires_auth(f):
         return f(*args, **kwargs)
 
     def jwt_decorated(*args, **kwargs):
-        token = get_token_auth_header()
-        jwt_response = get_current_active_user_chalice(token)
+        try:
+            token = get_token_auth_header()
+            log_debug(f'>> requires_auth.jwt_decorated | token: {token}')
+            jwt_response = get_current_active_user_chalice(token)
+            log_debug('>> requires_auth.jwt_decorated | jwt_response:' +
+                      f' {jwt_response}')
+        except Exception as e:
+            return http_response(
+                e.status_code or 500,
+                error_msg_formatter(e, 'JWT_AUTH_ERROR'),
+                {'Content-Type': 'application/json'}
+            )
         if isinstance(jwt_response, HTTPException):
             return http_response(
                 jwt_response.status_code,
@@ -211,17 +228,37 @@ def requires_auth(f):
             )
         if isinstance(jwt_response, Exception):
             raise jwt_response
+        app.current_request.context.update({'user': jwt_response.model_dump()})
         return f(*args, **kwargs)
 
     def auth_decorated(*args, **kwargs):
-        token = get_token_auth_header()
-        jsonurl = urlopen(
-            "https://"+env.get("AUTH0_DOMAIN")+"/.well-known/jwks.json"
-        )
-        jwks = json.loads(jsonurl.read())
+        try:
+            token = get_token_auth_header()
+            log_debug(f'get_token_auth_header | token: {token}')
+        except Exception as e:
+            return http_response(
+                e.status_code or 500,
+                error_msg_formatter(e, 'JWT_AUTH_ERROR'),
+                {'Content-Type': 'application/json'}
+            )
+        url = "https://"+env.get("AUTH0_DOMAIN")+"/.well-known/jwks.json"
+        log_debug(f'auth_decorated | url: {url}')
+        try:
+            jsonurl = urlopen(url)
+            log_debug(f'auth_decorated | jsonurl: {jsonurl}')
+        except Exception as e:
+            raise AuthError({"code": "invalid_claims",
+                             "description": "Unable to fetch JWKS"
+                             " (" + str(e) + ")"}, 401)
+        try:
+            jwks = json.loads(jsonurl.read())
+            log_debug(f'auth_decorated | jwks: {jwks}')
+        except Exception as e:
+            raise AuthError({"code": "invalid_claims",
+                             "description": "Unable to parse JWKS"
+                             " (" + str(e) + ")"}, 401)
         unverified_header = jwt.get_unverified_header(token)
-        log_debug('jwks', jwks)
-        log_debug('unverified_header', unverified_header)
+        log_debug(f'auth_decorated | unverified_header: {unverified_header}')
         rsa_key = {}
         for key in jwks["keys"]:
             if key["kid"] == unverified_header.get("kid"):
@@ -233,6 +270,7 @@ def requires_auth(f):
                     "e": key["e"]
                 }
         if rsa_key:
+            log_debug(f'auth_decorated | rsa_key: {rsa_key}')
             try:
                 payload = jwt.decode(
                     token,
@@ -241,6 +279,7 @@ def requires_auth(f):
                     audience=env.get("AUTH0_API_AUDIENCE"),
                     issuer="https://"+env.get("AUTH0_DOMAIN")+"/"
                 )
+                log_debug(f'auth_decorated | payload: {payload}')
             except jwt.ExpiredSignatureError:
                 raise AuthError({"code": "token_expired",
                                  "description": "token is expired"}, 401)
@@ -255,7 +294,7 @@ def requires_auth(f):
                                  "Unable to parse authentication"
                                  " token: " + str(e)}, 401)
 
-            app.current_request.context.update(payload)
+            app.current_request.context.update({'current_user': payload})
             return f(*args, **kwargs)
         raise AuthError({"code": "invalid_header",
                          "description": "Unable to find appropriate key"}, 401)
@@ -333,9 +372,9 @@ class UserData(BaseModel):
            content_types=['multipart/form-data'])
 def login_for_access_token_endpoint():
     log_endpoint_debug('/token')
-    log_debug('Before get form_data!')
+    log_debug('login_for_access_token_endpoint | Before get form_data!')
     form_data = get_multipart_form_data()
-    log_debug(f'form_data: {form_data}')
+    log_debug(f'login_for_access_token_endpoint | form_data: {form_data}')
     user_data = UserData(
         username=form_data.get('username'),
         password=form_data.get('password'),
@@ -365,7 +404,7 @@ def login_for_access_token_endpoint():
 def pget():
     log_endpoint_debug('/pget')
     query_params = get_query_params()
-    log_debug(f'query_params: {query_params}')
+    log_debug(f'pget | query_params: {query_params}')
     password = query_params['p']
     return dict(
         {

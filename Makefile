@@ -14,8 +14,12 @@ clean:
 update:
 	${SHELL} ./run_aws.sh update
 
-update_pakages_only:
-	${SHELL} ./run_aws.sh update_pakages_only
+lock:
+	npm install --package-lock-only
+	pipenv lock
+
+update_packages_only:
+	${SHELL} ./run_aws.sh update_packages_only
 
 test:
 	# E.g.

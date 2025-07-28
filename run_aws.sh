@@ -31,7 +31,10 @@ fi
 if [ "$PYTHON_VERSION" = "" ]; then
     echo "Error: PYTHON_VERSION is not set" && exit 1
 fi
-PYTHON3_EXEC='/usr/local/bin/python${PYTHON_VERSION}'
+PYTHON3_EXEC="/usr/local/bin/python${PYTHON_VERSION}"
+
+export DEP_PACKAGES="requests openai 'python-jose[cryptography]' 'passlib[bcrypt]' wheel python-multipart python-dotenv fastapi pymongo werkzeug boto3 chalice beautifulsoup4 cloudscraper selenium"
+
 
 # ..........
 
@@ -60,7 +63,6 @@ deploy_with_sls() {
         echo ""
         echo "Installing serverless..."
         echo ""
-        # if ! npm install -g serverless@^3
         if ! npm install -g serverless
         then
             echo "Error installing serverless" && exit 1
@@ -143,7 +145,6 @@ deploy_with_sls() {
     echo "Creating mediabros_apis..."
     echo ""
 
-    # if ! sls create ${SLS_PARAMETERS}
     if ! sls --app mediabros-apis ${SLS_PARAMETERS}
     then
         echo "Error creating mediabros_apis" && exit 1
@@ -167,7 +168,6 @@ deploy_with_sls() {
         sleep 10
     fi
 
-    # cd ${BUILD_PATH}
     if ! sls deploy --app mediabros-apis --stage ${stage} --debug
     then
         echo "Error deploying mediabros_apis" && exit 1
@@ -201,7 +201,7 @@ deploy_with_sls() {
     if [ "${API_URL}" = "" ]; then
         API_URL=$(perl -ne 'print "$1\n" if /GET - (https[^\s]+)\s/' /tmp/sls.txt | sed 's|{proxy+}||g' | head -n 1)
     else
-        API_URL="${API_URL%?}/usdvef/1"
+        API_URL="${API_URL%?}/usdveb/1"
     fi
 
     if [ "${API_URL}" = "" ]; then
@@ -354,7 +354,8 @@ uninstall_3rd_party_pakages() {
 
 install_3rd_party_pakages() {
     echo ""
-    echo "Installing 3rd party packages..."
+    echo "Installing 3rd party packages and dependencies..."
+    echo "${DEP_PACKAGES}"
     echo ""
     cd ${BASE_DIR}
 
@@ -372,23 +373,53 @@ install_3rd_party_pakages() {
     echo "Installing bcv-exchange-rates from git branch: ${BCV_EXCHANGE_RATES_BRANCH}"
     echo "Installing cop-exchange-rates from git branch: ${COP_EXCHANGE_RATES_BRANCH}"
 
-    pipenv install \
-        git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
+    #    git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
+    if ! pipenv install \
+        git+https://github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
         git+https://github.com/tomkat-cr/bcv-exchange-rates${BCV_EXCHANGE_RATES_BRANCH} \
-        git+https://github.com/tomkat-cr/cop-exchange-rates${COP_EXCHANGE_RATES_BRANCH}
+        git+https://github.com/tomkat-cr/cop-exchange-rates${COP_EXCHANGE_RATES_BRANCH} \
+        ${DEP_PACKAGES}
+    then
+        echo "Error installing 3rd party packages and dependencies" && exit 1
+    fi
 }
 
 create_chalice_config_json_file() {
     echo ""
     echo "Creating chalice config file..."
     echo ""
+
     CHALICE_DIR="${BASE_DIR}/.chalice"
     cp ${CHALICE_DIR}/config-example.json ${CHALICE_DIR}/config.json
+
+    # Set default values for required variables
+    required_vars=(
+        MONITOR_EXCHANGE_URL 
+        VEB_EXCHANGE_URL 
+        COP_EXCHANGE_URL 
+        BCV_EXCHANGE_RATES_BRANCH 
+        COP_EXCHANGE_RATES_BRANCH 
+        MONITOR_EXCHANGE_RATES_BRANCH 
+        CHROMEDRIVER_PATH 
+        CHROME_PATH 
+    )
+    for var in ${required_vars[@]}; do
+        if [ "${!var}" = "" ]; then
+            if [ "${DEBUG}" = "1" ]; then
+                echo "Setting default value for: ${var}"
+            fi
+            perl -i -pe "s|${var}_placeholder||g" ${CHALICE_DIR}/config.json
+        fi
+    done
+
     # For each variable defined in .env file, replace the placeholder in config.json
-    for var in $(cat .env | cut -d'=' -f1); do
+    for var in $(cat .env | grep -v '^#' | cut -d'=' -f1); do
         # Filter the comments
-        if [ "$(echo $var | cut -d'=' -f2 | cut -c1)" = "#" ]; then
-            # echo "Skipping comment: $var"
+        first_char=$(echo $var | head -c 1)
+        if [ "$first_char" = "#" ]; then
+            if [ "${DEBUG}" = "1" ]; then
+                echo "Skipping comment: $var"
+            fi
             continue
         fi
 
@@ -398,6 +429,9 @@ create_chalice_config_json_file() {
         # echo "${var}: ${var_value}"
 
         # Replace the placeholder in config.json
+        if [ "${DEBUG}" = "1" ]; then
+            echo "Setting: ${var} = ${var_value}"
+        fi
         perl -i -pe "s|${var}_placeholder|${var_value}|g" ${CHALICE_DIR}/config.json
     done
 
@@ -419,6 +453,17 @@ create_chalice_config_json_file() {
         echo "Leaving CHROMEDRIVER_PATH placeholder empty in config.json [2]..."
         echo ""
         perl -i -pe "s|CHROMEDRIVER_PATH_placeholder||g" ${CHALICE_DIR}/config.json
+    fi
+
+    if [ "${DEBUG}" = "1" ]; then
+        echo ""
+        echo "Config file content:"
+        echo ""
+        cat ${CHALICE_DIR}/config.json
+        echo ""
+        echo "Press any key to continue..."
+        read
+        echo ""
     fi
 }
 
@@ -529,8 +574,8 @@ run_pipfile() {
     # pipenv install \
     #     requests \
     #     openai \
-    #     "python-jose[cryptography]" \
-    #     "passlib[bcrypt]" \
+    #     'python-jose[cryptography]' \
+    #     'passlib[bcrypt]' \
     #     wheel \
     #     python-multipart \
     #     python-dotenv
@@ -560,31 +605,23 @@ run_pipfile() {
 
     if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
         load_3rd_party_pakages
+
         download_chromedriver
+
+        echo ""
+        echo "Installing dependencies..."
+        echo ""
+
+        if ! pipenv install ${DEP_PACKAGES}
+        then
+            echo ""
+            echo "Error: pipenv install failed."
+            echo ""
+            exit 1
+        fi
     else
         install_3rd_party_pakages
     fi
-
-    echo ""
-    echo "Installing dependencies..."
-    echo ""
-
-    pipenv install \
-        requests \
-        openai \
-        "python-jose[cryptography]" \
-        "passlib[bcrypt]" \
-        wheel \
-        python-multipart \
-        python-dotenv \
-        fastapi \
-        pymongo \
-        werkzeug \
-        boto3 \
-        chalice \
-        beautifulsoup4 \
-        cloudscraper \
-        selenium
 
     run_requirements_txt
 
@@ -623,17 +660,16 @@ run_tests() {
     echo ""
     echo "Running pipenv install --dev to install/update dependencies..."
     echo ""
-    if ! pytest --version; then
-        pipenv install --dev
-    fi
+    pipenv install --dev
     if [ $? -ne 0 ]; then
         echo ""
         echo "Error: pipenv install --dev failed."
         echo ""
         exit 1
+    else
+        echo ""
+        echo "Test dependencies installed successfully."
     fi
-    echo ""
-    echo "Test dependencies installed successfully."
     echo ""
     echo "Running pytest within pipenv environment..."
     echo ""
@@ -664,11 +700,12 @@ fi
 if [ "$1" = "update" ]; then
     # run_clean
     pipenv --rm
+	pipenv lock
     run_pipfile
     exit
 fi
 
-if [ "$1" = "update_pakages_only" ]; then
+if [ "$1" = "update_packages_only" ]; then
     if [ "${CHALICE_DEPLOYMENT}" = "1" ]; then
         load_3rd_party_pakages
         download_chromedriver

@@ -1,6 +1,6 @@
 {
   "name": "mediabros_apis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Mediabros APIs for currency and crypto exchange, OpenAI API, and Telegram messaging for APIs error reporting.",
   "main": "chalicelib/index.py",
   "scripts": {

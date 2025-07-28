@@ -2,7 +2,7 @@
 
 ## English
 
-Mediabros APIs are a collection of endpoints to get currency exchange (Colombian Pesos or Venezuelan Bolivar to US Dolar), crypto prices, OpenAI API, and Telegram messaging for APIs error reporting.
+Mediabros APIs are a collection of endpoints to get currency exchange (Colombian Pesos or Venezuelan Bolívar to US Dolar), crypto prices, OpenAI API, and Telegram messaging for APIs error reporting.
 
 ### Technologies
 
@@ -15,7 +15,9 @@ Mediabros APIs are a collection of endpoints to get currency exchange (Colombian
 
 - ai: Question to OpenAI's ChatGPT
 - usdcop: USD to Colombian Pesos (COP)
-- usdvef: USD to Venezuelan Bolivar (Bs)
+- usdveb: USD to Venezuelan Bolívar (Bs)
+- usdveb_monitor: USD to Venezuelan Bolívar (Bs) with Monitor rate
+- usdveb_full: USD to Venezuelan Bolívar (Bs) with official BCV and Monitor rate
 - copveb: COP to Bs
 - vebcop: Bs to COP
 - btc: Bitcoin to USD
@@ -74,10 +76,10 @@ make deploy
 
 Test API:
 
-USD to Venezuelan Bolivar (Bs):
+USD to Venezuelan Bolívar (Bs):
 
-[http://127.0.0.1:5001/usdvef](http://127.0.0.1:5001/usdvef)<br/>
-[http://127.0.0.1:5001/usdvef/1](http://127.0.0.1:5001/usdvef/1)
+[http://127.0.0.1:5001/usdveb](http://127.0.0.1:5001/usdveb)<br/>
+[http://127.0.0.1:5001/usdveb/1](http://127.0.0.1:5001/usdveb/1)
 
 USD to Colombian Pesos (COP):
 
@@ -95,10 +97,10 @@ USD to Colombian Pesos (COP):
 [https://mediabros-apis.vercel.app/usdcop](https://mediabros-apis.vercel.app/usdcop)<br/>
 [https://mediabros-apis.vercel.app/usdcop/{debug}](https://mediabros-apis.vercel.app/usdcop/1)
 
-USD to Venezuelan Bolivar (Bs):
+USD to Venezuelan Bolívar (Bs):
 
-[https://mediabros-apis.vercel.app/usdvef](https://mediabros-apis.vercel.app/usdvef)<br/>
-[https://mediabros-apis.vercel.app/usdvef/{debug}](https://mediabros-apis.vercel.app/usdvef/1)
+[https://mediabros-apis.vercel.app/usdveb](https://mediabros-apis.vercel.app/usdveb)<br/>
+[https://mediabros-apis.vercel.app/usdveb/{debug}](https://mediabros-apis.vercel.app/usdveb/1)
 
 COP to Bs:
 
@@ -131,7 +133,7 @@ Any crypto currency to USD:
 
 ## Spanish
 
-Mediabros APIs son una serie de endpoints para obtener cotizaciones de moneda (Pesos Colombianos o Bolivares a Dolar Norteamericano), precio de criptomonedas, API de OpenAI, y mensajería Telegram para reporte de errores de las API, entre otros. Este Backend esta hecho en Python y FastAPI.
+Mediabros APIs son una serie de endpoints para obtener cotizaciones de moneda (Pesos Colombianos o Bolívares a Dolar Norteamericano), precio de criptomonedas, API de OpenAI, y mensajería Telegram para reporte de errores de las API, entre otros. Este Backend esta hecho en Python y FastAPI.
 
 ## Llamada a la API de producción
 
@@ -142,9 +144,9 @@ Cotización del Dólar respecto al Peso Colombiano (COP):
 [https://mediabros-apis.vercel.app/usdcop](https://mediabros-apis.vercel.app/usdcop)<br/>
 [https://mediabros-apis.vercel.app/usdcop/{debug}](https://mediabros-apis.vercel.app/usdcop/1)
 
-Cotización del Dólar respecto al Bolivar de Venezuela (Bs):
-[https://mediabros-apis.vercel.app/usdvef](https://mediabros-apis.vercel.app/usdvef)<br/>
-[https://mediabros-apis.vercel.app/usdvef/{debug}](https://mediabros-apis.vercel.app/usdvef/1)
+Cotización del Dólar respecto al Bolívar de Venezuela (Bs):
+[https://mediabros-apis.vercel.app/usdveb](https://mediabros-apis.vercel.app/usdveb)<br/>
+[https://mediabros-apis.vercel.app/usdveb/{debug}](https://mediabros-apis.vercel.app/usdveb/1)
 
 COP a Bs
 [https://mediabros-apis.vercel.app/copveb](https://mediabros-apis.vercel.app/copveb)<br/>

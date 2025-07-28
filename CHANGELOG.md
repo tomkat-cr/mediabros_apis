@@ -17,10 +17,13 @@ This project adheres to [Semantic Versioning](http://semver.org/) and [Keep a Ch
 ### Breaks
 
 
-## 1.1.0 (2025-05-23)
+## 1.1.0 (2025-07-27)
 ---
 
 ### New
+Add the /usdveb_monitor endpoint to return the USD/VEB rate from the MonitorDolarVenezuela Exchange API.
+Add the /usdveb_full endpoint to return both the official BCV and the MonitorDolarVenezuela USD/VEB exchange rates.
+Add the BANK_PERCENT_INCREASE_OFFICIAL and BANK_PERCENT_INCREASE_GOOGLE envvars to configure the bank percent increase for transfers in the USD/COP exchange rates.
 Add monitor-exchange-rates to Pipfile
 Add bcv-exchange-rates to Pipfile (replaces Vercel API)
 Add cop-exchange-rates to Pipfile (replaces Vercel API)
@@ -29,19 +32,17 @@ Add usage instructions to README.md
 Add STS deployment method.
 Add integration tests.
 Add CHALICE_DEPLOYMENT envvar. Chalice deployment must be enabled with the assignment CHALICE_DEPLOYMENT="1". STS deployment is the default method.
+For the Chalice deployment, the external github repos "bcv", "cop" and "monitor" exchange-rates are not installed with pipenv install, but copied to the "vendor" directory because Chalice deploy won't recognice its versions.
 Add CHROMEDRIVER_INCLUDE envvar. Chrome and Chromedriver download must be enabled by the assignment CHROMEDRIVER_INCLUDE="1".
 Add CHROME_PATH and CHROMEDRIVER_PATH envvar to config.json to address the "Selenium error: Message: Unable to obtain driver for chrome"
-For the Chalice deployment, the external github repos "bcv", "cop" and "monitor" exchange-rates are not installed with pipenv install, but copied to the "vendor" directory because Chalice deploy won't recognice its versions.
 Add beautifulsoup4, cloudscraper, selenium because tthe "vendor" directory change for external github repos.
-Add "update_pakages_only" to Makefile to build from the external github repos and download the chrome driver to vendor directory.
-Add the /usdveb_monitor endpoint to return the USD/VEB rate from the MonitorDolarVenezuela Exchange API.
-Add the /usdveb_full endpoint to return both the official BCV and the MonitorDolarVenezuela USD/VEB exchange rates.
-Add the BANK_PERCENT_INCREASE_OFFICIAL and BANK_PERCENT_INCREASE_GOOGLE envvars to configure the bank percent increase for transfers in the USD/COP exchange rates.
+Add "update_packages_only" to Makefile to build from the external github repos and download the chrome driver to vendor directory.
 
 ### Changes
-Rename the /vef endpoint to /veb.
-The /veb endpoint only returns the official BCV USD/Bs rate.
+Rename the /usdvef endpoint to /usdveb. "/usdvef" is deprecated and removed.
+The /usdveb endpoint only returns the official BCV USD/Bs rate. No alternative/parallel exchange rate is provided.
 Update Python version to 3.11
+Replace deprecated "passlib" with "werkzeug" for password encryption.
 
 ### Fixes
 Update dependencies to latest versions to fix Snyk alerts.
@@ -50,14 +51,14 @@ Replace eventual Github PAT in Pipfile and requirements.txt.
 Proper error handling to veb_monitor().
 
 ### Breaks
-The /veb command does not include the DolarToday data and API call because it was deprecated.
+The /usdveb command does not include the DolarToday data and API call because it was deprecated.
 
 
 ## 1.0.0 (2025-05-14)
 ---
 
 ### Changes
-Update OpenAO model and API call (2023-02-04)
+Update OpenAI model and API call (2023-02-04)
 
 
 ## 0.1.8 (2023-03-29)

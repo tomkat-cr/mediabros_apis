@@ -18,7 +18,7 @@ if [ "$PYTHON_VERSION" = "" ]; then
     echo "Error: PYTHON_VERSION is not set" && exit 1
 fi
 
-PYTHON3_EXEC='/usr/local/bin/python${PYTHON_VERSION}'
+PYTHON3_EXEC="/usr/local/bin/python${PYTHON_VERSION}"
 
 if [ "$1" = "deactivate" ]; then
     cd ${APP_DIR} ;
