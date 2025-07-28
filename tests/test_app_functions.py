@@ -41,89 +41,11 @@ from app import (
     auth0_api_call
 )
 
-
-AUTH0_MAPI_TOKEN = 'test_mapi_token_fixture'
-AUTH0_DOMAIN_FIXTURE = 'fixture.auth0.com'
-
-
-@pytest.fixture(autouse=True)
-def mock_auth_settings_globally():
-    # These are the default settings for most auth tests (JWT path)
-    # Patching app.settings ensures that the settings instance
-    # used by app.py is modified.
-
-    #  mock.patch('app.settings.AUTH_PROVIDER', 'jwt', create=True), \
-    #  mock.patch('app.settings.JWT_ISSUER', 'test_jwt_issuer',
-    #             create=True), \
-
-    with mock.patch(
-            'chalicelib.utility_jwt.fetch_user_by_entryname',
-            return_value={
-                'error': False,
-                'found': True,
-                'resultset': {
-                    '_id': 'mock_user_id',
-                    'username': 'mock_user',
-                    'email': 'mock_email',
-                    'full_name': 'mock_full_name',
-                    'hashed_password': 'mock_hashed_password',
-                    'disabled': False
-                }
-            },
-            create=True), \
-        mock.patch('app.settings.SECRET_KEY',
-                   'test_jwt_secret_key_fixture', create=True), \
-        mock.patch('app.settings.ALGORITHM', 'HS256', create=True), \
-        mock.patch.dict(
-            # Patches os.environ
-            os.environ, {
-                "AUTH0_DOMAIN": AUTH0_DOMAIN_FIXTURE,
-                "AUTH0_ALGORITHMS": "RS256",
-                "AUTH0_API_AUDIENCE": "test_api_audience"
-            },
-            clear=True):
-        yield
-
-
-# Helper to create a mock CurrentRequest-like object
-def mock_current_request(
-    headers=None,
-    raw_body=b'',
-    json_body=None,
-    query_params=None,  # For to_dict()
-    method='GET',
-    uri_params=None,
-    context=None,
-    stage_vars=None,
-    authorizer_principal_id=None,  # For context['authorizer']['principalId']
-    is_xhr=False
-):
-    request_mock = mock.MagicMock()
-    request_mock.headers = headers if headers is not None else {}
-    request_mock.raw_body = raw_body
-    request_mock.json_body = json_body
-    request_mock.method = method
-    request_mock.uri_params = uri_params if uri_params is not None else {}
-    request_mock.context = context if context is not None else {}
-    if authorizer_principal_id:
-        if 'authorizer' not in request_mock.context:
-            request_mock.context['authorizer'] = {}
-        request_mock.context['authorizer']['principalId'] = \
-            authorizer_principal_id
-
-    request_mock.stage_vars = stage_vars if stage_vars is not None else {}
-    request_mock.is_xhr = is_xhr
-
-    # Mock the to_dict() method, used by get_query_params
-    request_mock.to_dict.return_value = {
-        'headers': request_mock.headers,
-        'uri_params': request_mock.uri_params,
-        'method': request_mock.method,
-        'context': request_mock.context,
-        'stage_vars': request_mock.stage_vars,
-        'query_params': query_params if query_params is not None else {}
-    }
-    return request_mock
+from tests.conftest import (
+    mock_current_request,
+    AUTH0_MAPI_TOKEN,
+    AUTH0_DOMAIN_FIXTURE,
+)
 
 
 # --- Tests for simple utility functions ---
@@ -345,25 +267,15 @@ def test_get_multipart_form_data(mock_app_instance, mock_get_parts_func):
 
 # Mock for settings used in requires_auth
 
-# @mock.patch('chalicelib.utility_jwt.get_current_active_user_chalice')
 @mock.patch('app.urlopen')
 @mock.patch('app.get_token_auth_header')
 @mock.patch('app.jwt.get_unverified_header')
 @mock.patch('app.jwt.decode')
-# @mock.patch.dict(
-#     os.environ, {
-#         "AUTH0_DOMAIN": AUTH0_DOMAIN_FIXTURE,
-#         "AUTH0_ALGORITHMS": "RS256",
-#         "AUTH0_API_AUDIENCE": "test_api_audience"
-#     },
-#     clear=True    # Patches os.environ
-# )
 def test_requires_auth_auth0_success(
     mock_jwt_decode,
     mock_jwt_get_unverified_header,
     mock_get_token_auth_header,
     mock_urlopen,
-    # mock_get_current_active_user_chalice,
 ):
     with mock.patch('app.settings.JWT_ENABLED', '0', create=True), \
          mock.patch('app.settings.AUTH0_ENABLED', '1', create=True):
@@ -401,15 +313,6 @@ def test_requires_auth_auth0_success(
             "aud": 'test_api_audience'
         }
         mock_jwt_decode.return_value = decoded_payload
-
-        # mock_get_current_active_user_chalice.return_value = {
-        #     'error': False,
-        #     'found': True,
-        #     'resultset': {
-        #         '_id': 'mock_user_db_id',
-        #         'entryname': decoded_payload['sub']
-        #     }
-        # }
 
         # Define protected route that uses the global app.current_request
         # for claims

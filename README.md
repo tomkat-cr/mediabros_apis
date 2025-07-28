@@ -26,7 +26,7 @@ Mediabros APIs are a collection of endpoints to get currency exchange (Colombian
 
 ### Requirements
 
-- Python 3.13
+- Python 3.11 - 3.13
 - Git
 - Pipenv
 - Make
@@ -88,6 +88,8 @@ USD to Colombian Pesos (COP):
 [http://127.0.0.1:5001/usdcop/1](http://127.0.0.1:5001/usdcop/1)
 
 ### Production API call
+
+The following are production API call examples when deployed to Vercel project named `mediabros-apis`:
 
 Question to OpenAI's ChatGPT:
 

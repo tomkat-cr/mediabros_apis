@@ -37,6 +37,7 @@ Add CHROMEDRIVER_INCLUDE envvar. Chrome and Chromedriver download must be enable
 Add CHROME_PATH and CHROMEDRIVER_PATH envvar to config.json to address the "Selenium error: Message: Unable to obtain driver for chrome"
 Add beautifulsoup4, cloudscraper, selenium because tthe "vendor" directory change for external github repos.
 Add "update_packages_only" to Makefile to build from the external github repos and download the chrome driver to vendor directory.
+Add documentation files based on the Memory Bank template [GS-208].
 
 ### Changes
 Rename the /usdvef endpoint to /usdveb. "/usdvef" is deprecated and removed.

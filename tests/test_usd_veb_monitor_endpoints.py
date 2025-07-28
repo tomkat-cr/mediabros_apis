@@ -16,6 +16,17 @@ import pytest
 #   @EnParaleloVzlaVIP: 110.4
 # Effective Date: 2025-05-24
 
+MONITOR_WEBSITE_DOWN_MSG = "HTTPSConnectionPool(host='monitordolarvenezuela.com', port=443)"
+MONITOR_WEBSITE_UNREACHABLE_MSG = "Request blocked by Cloudflare protection"
+
+
+def keep_processing(response):
+    if MONITOR_WEBSITE_DOWN_MSG in response.text:
+        return False
+    if MONITOR_WEBSITE_UNREACHABLE_MSG in response.text:
+        return False
+    return True
+
 
 # @pytest.mark.parametrize("debug", ["", "/0", "/2"])
 # def test_usdveb_monitor(client, debug):
@@ -25,6 +36,8 @@ def test_usdveb_monitor(client):
     response = client.get(f'/usdveb_monitor{debug}')
     assert response.status_code == 200
     assert response.text is not None
+    if not keep_processing(response):
+        pytest.skip("Skipping test because keep_processing() is False")
     assert 'Monitor exchange rate:' in response.text
     assert 'Dólar BCV (Oficial):' in response.text
     assert 'Dólar Paralelo:' in response.text
@@ -56,6 +69,8 @@ def test_usdveb_monitor(client):
 def test_usdveb_monitor_debug(client):
     """Test the /usdveb_monitor/{debug} endpoint."""
     response = client.get('/usdveb_monitor/1')
+    if not keep_processing(response):
+        pytest.skip("Skipping test because keep_processing() is False")
     assert response.status_code == 200
     assert response.text is not None
     assert 'Monitor exchange rates:' in response.text
@@ -91,6 +106,8 @@ def test_usdveb_monitor_debug(client):
 @pytest.mark.parametrize("debug", ["", "/0", "/2"])
 def test_usdveb_full(client, debug):
     response = client.get(f'/usdveb_full{debug}')
+    if not keep_processing(response):
+        pytest.skip("Skipping test because keep_processing() is False")
     assert response.status_code == 200
     assert response.text is not None
     assert 'BCV official exchange rate:' in response.text
@@ -132,6 +149,8 @@ def test_usdveb_full(client, debug):
 
 def test_usdveb_full_debug(client):
     response = client.get('/usdveb_full/1')
+    if not keep_processing(response):
+        pytest.skip("Skipping test because keep_processing() is False")
     assert response.status_code == 200
     assert response.text is not None
     assert 'BCV official exchange rates:' in response.text

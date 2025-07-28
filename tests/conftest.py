@@ -4,6 +4,8 @@ import os
 import sys
 import json
 
+from unittest import mock
+
 from app import app as actual_chalice_app   # Import your Chalice app object
 from chalice.local import LocalGateway
 from chalice.config import Config as ChaliceConfig
@@ -90,21 +92,23 @@ class MockClientResponse:
 class CustomTestClient:
     def __init__(self, chalice_app_obj):
         # Create a minimal ChaliceConfig.
-        try:
-            # Try to load config from .chalice/config.json if it exists
-            # This might be necessary if your app uses app.lambda_context for
-            # stage variables
-            config_file_path = os.path.join(PROJECT_ROOT, '.chalice',
-                                            'config.json')
-            if os.path.exists(config_file_path):
-                config = ChaliceConfig.load(project_dir=PROJECT_ROOT)
-            else:
-                print("Chalice config file (.chalice/config.json) not found, "
-                      + "using default config.")
-                config = ChaliceConfig()    # Basic default config
-        except Exception as e:
-            print(f"Error loading Chalice config, using default: {e}")
-            config = ChaliceConfig()
+        # try:
+        #     # Try to load config from .chalice/config.json if it exists
+        #     # This might be necessary if your app uses app.lambda_context for
+        #     # stage variables
+        #     config_file_path = os.path.join(PROJECT_ROOT, '.chalice',
+        #                                     'config.json')
+        #     if os.path.exists(config_file_path):
+        #         config = ChaliceConfig.load(project_dir=PROJECT_ROOT)
+        #     else:
+        #         print("Chalice config file (.chalice/config.json) not found,"
+        #               + " using default config.")
+        #         config = ChaliceConfig()    # Basic default config
+        # except Exception as e:
+        #     print(f"Error loading Chalice config, using default: {e}")
+        #     config = ChaliceConfig()
+
+        config = ChaliceConfig()    # Basic default config
 
         self.gateway = LocalGateway(chalice_app_obj, config)
 
@@ -165,6 +169,121 @@ class CustomTestClient:
     # def delete(self, path, headers=None, params=None):
     #     return self._request('DELETE', path, headers=headers,
     #                          query_params=params)
+
+
+# Helper to create a mock CurrentRequest-like object
+def mock_current_request(
+    headers=None,
+    raw_body=b'',
+    json_body=None,
+    query_params=None,  # For to_dict()
+    method='GET',
+    uri_params=None,
+    context=None,
+    stage_vars=None,
+    authorizer_principal_id=None,  # For context['authorizer']['principalId']
+    is_xhr=False
+):
+    request_mock = mock.MagicMock()
+    request_mock.headers = headers if headers is not None else {}
+    request_mock.raw_body = raw_body
+    request_mock.json_body = json_body
+    request_mock.method = method
+    request_mock.uri_params = uri_params if uri_params is not None else {}
+    request_mock.context = context if context is not None else {}
+    if authorizer_principal_id:
+        if 'authorizer' not in request_mock.context:
+            request_mock.context['authorizer'] = {}
+        request_mock.context['authorizer']['principalId'] = \
+            authorizer_principal_id
+
+    request_mock.stage_vars = stage_vars if stage_vars is not None else {}
+    request_mock.is_xhr = is_xhr
+
+    # Mock the to_dict() method, used by get_query_params
+    request_mock.to_dict.return_value = {
+        'headers': request_mock.headers,
+        'uri_params': request_mock.uri_params,
+        'method': request_mock.method,
+        'context': request_mock.context,
+        'stage_vars': request_mock.stage_vars,
+        'query_params': query_params if query_params is not None else {}
+    }
+    return request_mock
+
+
+AUTH0_MAPI_TOKEN = 'test_mapi_token_fixture'
+AUTH0_DOMAIN_FIXTURE = 'fixture.auth0.com'
+
+
+@pytest.fixture(autouse=True)
+def mock_auth_settings_globally():
+    # These are the default settings for most auth tests (JWT path)
+    # Patching app.settings ensures that the settings instance
+    # used by app.py is modified.
+    with mock.patch(
+            'chalicelib.utility_jwt.fetch_user_by_entryname',
+            return_value={
+                'error': False,
+                'found': True,
+                'resultset': {
+                    '_id': 'mock_user_id',
+                    'username': 'mock_user',
+                    'email': 'mock_email',
+                    'full_name': 'mock_full_name',
+                    'hashed_password': 'mock_hashed_password',
+                    'disabled': False
+                }
+            },
+            create=True), \
+        mock.patch('app.settings.SECRET_KEY',
+                   'test_jwt_secret_key_fixture', create=True), \
+        mock.patch('app.settings.ALGORITHM', 'HS256', create=True), \
+        mock.patch.dict(
+            # Patches os.environ
+            os.environ, {
+                "AUTH0_DOMAIN": AUTH0_DOMAIN_FIXTURE,
+                "AUTH0_ALGORITHMS": "RS256",
+                "AUTH0_API_AUDIENCE": "test_api_audience",
+                "AUTH0_MAPI_API_TOKEN": AUTH0_MAPI_TOKEN,
+                "TELEGRAM_CHAT_ID": "test_telegram_chat_id",
+                "BANK_PERCENT_INCREASE_OFFICIAL": "0.53",
+                "BANK_PERCENT_INCREASE_GOOGLE": "1.00"
+            },
+            clear=True):
+        yield
+
+
+@pytest.fixture
+def mock_requires_auth():
+    """Fixture to mock the requires_auth decorator."""
+    decoded_payload = {
+        'sub': 'mock_user',
+        'iss': 'test_jwt_issuer',
+        'aud': 'test_api_audience'
+    }
+
+    # Set current_request directly on the app instance for
+    # the decorator
+    mock_req_for_jwt = mock_current_request(
+        headers={'Authorization': 'Bearer valid_jwt_token'},
+        context={}
+    )
+    original_current_request = getattr(actual_chalice_app, 'current_request', None)
+    # This is the app.current_request the decorator will use
+    actual_chalice_app.current_request = mock_req_for_jwt
+
+    with mock.patch('app.get_token_auth_header',
+                    return_value='Bearer valid_jwt_token'), \
+         mock.patch('app.jwt.decode', return_value=decoded_payload) \
+            as mock_decode:
+        try:
+            yield mock_decode
+        finally:
+            if original_current_request is not None:
+                actual_chalice_app.current_request = original_current_request
+            elif hasattr(actual_chalice_app, 'current_request'):   # Check if it was set by us
+                del actual_chalice_app.current_request
 
 
 @pytest.fixture(scope='session')
