@@ -6,7 +6,7 @@ Mediabros APIs are a collection of endpoints to get currency exchange (Colombian
 
 ### Technologies
 
-- Backend: Python and FastAPI
+- Backend: Python, FastAPI and Chalice
 - Database: MongoDB
 - API Gateway: AWS API Gateway
 - Deployment: AWS Lambda
@@ -26,7 +26,8 @@ Mediabros APIs are a collection of endpoints to get currency exchange (Colombian
 
 ### Requirements
 
-- Python 3.11
+- Python 3.13
+- Git
 - Pipenv
 - Make
 - Optional: pyenv

@@ -41,7 +41,7 @@ Add "update_packages_only" to Makefile to build from the external github repos a
 ### Changes
 Rename the /usdvef endpoint to /usdveb. "/usdvef" is deprecated and removed.
 The /usdveb endpoint only returns the official BCV USD/Bs rate. No alternative/parallel exchange rate is provided.
-Update Python version to 3.11
+Update Python version to 3.13
 Replace deprecated "passlib" with "werkzeug" for password encryption.
 
 ### Fixes
