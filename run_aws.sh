@@ -110,7 +110,7 @@ deploy_with_sls() {
     echo ""
 
     if [[ "${MEDIABROS_APIS_REPO}" == *"https://"* ]]; then
-        echo "Did you committed all changes to the remote repository?"
+        echo "Have you committed all changes to the remote repository?"
         echo "Press [Enter] key to continue, [Ctrl+C] or [a] to abort..."
         echo ""
         read any_key
@@ -274,7 +274,7 @@ run_deploy() {
 }
 
 set_local_chromedriver_path() {
-    export CHROMEDRIVER_PATH="./vendor/chromedriver-linux64"
+    export CHROMEDRIVER_PATH="${BASE_DIR}/vendor/chromedriver-linux64"
 }
 
 set_aws_chromedriver_path() {

@@ -89,8 +89,10 @@ def test_http_response():
 
     assert isinstance(response, Response)
     assert response.status_code == status_code
-    assert response.body == {"code": status_code, "detail": detail} \
-        # Expect 'detail' based on test failure
+    assert response.body == {
+        "code": status_code,
+        "detail": detail
+    }  # Expect 'detail' based on test failure
     assert response.headers['Content-Type'] == 'application/json'
     assert response.headers['X-Custom-Header'] == 'TestValue'
 

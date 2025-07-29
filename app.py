@@ -2,8 +2,6 @@
 # Chalice implementation for project: mediabros_apis
 # 2023-02-04 | CR
 #
-
-# import cgi
 import email
 
 import logging
@@ -94,6 +92,12 @@ def _get_parts():
         raise Exception('No boundary found in content-type header [2]')
 
     body = app.current_request.raw_body
+    if not isinstance(body, bytes):
+        if isinstance(body, str):
+            body = body.encode('utf-8')  # Convert string to bytes
+        else:
+            raise TypeError("raw_body must be bytes or string")
+
     data = email.parser.BytesParser().parsebytes(body)
 
     # Get the email message from the raw body separating the boundaries
