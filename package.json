@@ -1,6 +1,6 @@
 {
   "name": "mediabros_apis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Mediabros APIs for currency and crypto exchange, OpenAI API, and Telegram messaging for APIs error reporting.",
   "main": "chalicelib/index.py",
   "scripts": {
@@ -12,7 +12,6 @@
     "aws:clean": "sh run_aws.sh clean",
     "aws:create_stack": "sh run_aws.sh create_stack",
     "aws:delete_stack": "sh run_aws.sh delete_stack",
-
     "vercel:test": "sh run_vercel.sh test",
     "vercel:run": "sh run_vercel.sh",
     "vercel:run:cli": "sh run_vercel.sh run_module",
@@ -22,7 +21,6 @@
     "vercel:deactivate": "sh run_vercel.sh deactivate",
     "vercel:pipfile": "sh run_vercel.sh pipfile",
     "vercel:clean": "sh run_vercel.sh clean",
-
     "flyio:create_app": "sh run_fly_io.sh create_app",
     "flyio:set_vars": "sh run_fly_io.sh set_vars",
     "flyio:restart": "sh run_fly_io.sh restart",
@@ -48,8 +46,5 @@
   "bugs": {
     "url": "https://github.com/tomkat-cr/mediabros_apis/issues"
   },
-  "homepage": "https://github.com/tomkat-cr/mediabros_apis#readme",
-  "devDependencies": {
-    "ngrok": "^4.3.3"
-  }
+  "homepage": "https://github.com/tomkat-cr/mediabros_apis#readme"
 }

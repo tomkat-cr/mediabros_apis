@@ -1,0 +1,179 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: mediabros
+
+app: mediabros-apis
+service: mediabros-apis
+
+# Provider configuration
+provider:
+  name: aws
+  stage: ${opt:stage, 'prod'}
+  region: ${env:AWS_REGION, 'us-east-1'}
+  ecr:
+    images:
+      img:
+        path: ./
+        buildArgs:
+          STAGE: ${sls:stage}
+        buildOptions:
+          [
+            '--provenance=false',
+            '--platform=linux/amd64',
+          ]
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - 'lambda:InvokeFunction'
+          Resource:
+            - Fn::Join:
+              - ':'
+              - - 'arn:aws:lambda'
+                - Ref: 'AWS::Region'
+                - Ref: 'AWS::AccountId'
+                - 'function:${self:service}-${sls:stage}-api'
+
+# Lambda Functions configuration
+functions:
+  api:
+    image:
+      name: img
+      command: ["lambda_handler.lambda_handler"]
+    timeout: 29
+    # If you experience any errors such as Chrome crashing or not being available you might need to increase the storage available to your Lambda Function. See #102
+    memorySize: 2048
+    environment:
+      # App configuration
+      APP_NAME: ${env:APP_NAME, 'mediabros-apis'}
+      SERVER_NAME: ${env:SERVER_NAME, '${self:service}@aws'}
+      SECRET_KEY: ${env:SECRET_KEY, ''}
+      ALGORITHM: ${env:ALGORITHM, 'HS256'}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${env:ACCESS_TOKEN_EXPIRE_MINUTES, '30'}
+      # External APIs
+      TELEGRAM_BOT_TOKEN: ${env:TELEGRAM_BOT_TOKEN, ''}
+      TELEGRAM_CHAT_ID: ${env:TELEGRAM_CHAT_ID, ''}
+      OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+      # Database configuration
+      DB_TYPE: ${env:DB_TYPE, 'mongodb'}
+      DB_URI: ${env:DB_URI, ''}
+      DB_NAME: ${env:DB_NAME, ''}
+      # Exchange rates configuration
+      MONITOR_EXCHANGE_URL: ${env:MONITOR_EXCHANGE_URL, ''}
+      VEB_EXCHANGE_URL: ${env:VEB_EXCHANGE_URL, ''}
+      COP_EXCHANGE_URL: ${env:COP_EXCHANGE_URL, ''}
+      # Debug configuration
+      APP_DEBUG: ${env:APP_DEBUG, '0'}
+      CODE_DEBUG: ${env:CODE_DEBUG, '0'}
+      # Chrome configuration
+      CHROMEDRIVER_PATH: '/opt/chromedriver'
+      CHROME_PATH: '/opt/chrome'
+      #
+      # COP (Colombian Pesos) exchange rates config
+      # Bank percent increase for transfer (for Official exchange rates)
+      BANK_PERCENT_INCREASE_OFFICIAL: ${env:BANK_PERCENT_INCREASE_OFFICIAL, '0.53'}
+      # Bank percent increase for transfer (for Google exchange rates)
+      BANK_PERCENT_INCREASE_GOOGLE: ${env:BANK_PERCENT_INCREASE_GOOGLE, '1.00'}
+    events:
+      # API Gateway endpoints
+      - http:
+          path: /login
+          method: POST
+          cors: true
+      - http:
+          path: /token
+          method: POST
+          cors: true
+      - http:
+          path: /usdcop
+          method: GET
+          cors: true
+      - http:
+          path: /usdcop/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /usdveb
+          method: GET
+          cors: true
+      - http:
+          path: /usdveb/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /usdveb_full
+          method: GET
+          cors: true
+      - http:
+          path: /usdveb_full/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /usdveb_monitor
+          method: GET
+          cors: true
+      - http:
+          path: /usdveb_monitor/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /copveb
+          method: GET
+          cors: true
+      - http:
+          path: /copveb/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /vebcop
+          method: GET
+          cors: true
+      - http:
+          path: /vebcop/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /btc
+          method: GET
+          cors: true
+      - http:
+          path: /btc/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /eth
+          method: GET
+          cors: true
+      - http:
+          path: /eth/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /crypto/{symbol}
+          method: GET
+          cors: true
+      - http:
+          path: /crypto/{symbol}/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /crypto_wc/{symbol}/{currency}/{debug}
+          method: GET
+          cors: true
+      - http:
+          path: /ai
+          method: POST
+          cors: true
+      - http:
+          path: /ai/{debug}
+          method: POST
+          cors: true
+      - http:
+          path: /codex
+          method: GET
+          cors: true
+      - http:
+          path: /codex/{debug}
+          method: GET
+          cors: true
+

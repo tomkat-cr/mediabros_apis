@@ -3,16 +3,23 @@
 # 2023-02-01 | CR
 #
 APP_DIR='chalicelib'
-PYTHON3_EXEC='/usr/local/bin/python3.9'
+
 if [ -f "./.env" ]; then
     ENV_FILESPEC="./.env"
 else
     ENV_FILESPEC="../.env"
 fi
 set -o allexport; source ${ENV_FILESPEC}; set +o allexport ;
+
 if [ "$PORT" = "" ]; then
     PORT="5001"
 fi
+if [ "$PYTHON_VERSION" = "" ]; then
+    echo "Error: PYTHON_VERSION is not set" && exit 1
+fi
+
+PYTHON3_EXEC="/usr/local/bin/python${PYTHON_VERSION}"
+
 if [ "$1" = "deactivate" ]; then
     cd ${APP_DIR} ;
     deactivate ;
@@ -24,17 +31,18 @@ if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" && "$1" != "s
     if [ -f "requirements.txt" ]; then
         pip3 install -r requirements.txt
     else
-        pip install requests
-        pip install fastapi
-        pip install a2wsgi
-        pip install openai
-        pip install pymongo
-        pip install werkzeug
-        pip install "python-jose[cryptography]"
-        pip install "passlib[bcrypt]"
-        pip install wheel
-        pip install python-multipart
-        pip install python-dotenv
+        pip install \
+            requests \
+            fastapi \
+            a2wsgi \
+            openai \
+            pymongo \
+            werkzeug \
+            "python-jose[cryptography]" \
+            "passlib[bcrypt]" \
+            wheel \
+            python-multipart \
+            python-dotenv
         pip install gunicorn
         pip freeze > requirements.txt
     fi

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="mediabros_apis",
-    version="1.0.0",
+    version="1.1.0",
     author="Carlos J. Ramirez",
     author_email="cramirez@mediabros.com",
     description="Mediabros APIs for currency and crypto exchange, " +

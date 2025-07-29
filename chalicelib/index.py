@@ -1,5 +1,5 @@
 # index.py
-# Project: mediabros_apis
+# FastAPI implementation for Project: mediabros_apis
 # 2023-01-24 | CR
 #
 import logging
@@ -11,13 +11,15 @@ from a2wsgi import ASGIMiddleware
 from pydantic import BaseModel
 
 from chalicelib.utility_password import get_password_hash
-from chalicelib.utility_jwt import Token, login_for_access_token, get_current_active_user
+from chalicelib.utility_jwt import (
+    Token, login_for_access_token, get_current_active_user)
 from chalicelib.utility_date import get_formatted_date
-from chalicelib.utility_general import get_command_line_args, log_endpoint_debug, \
-    log_debug, log_normal
+from chalicelib.utility_general import (
+    get_command_line_args, log_endpoint_debug, log_debug, log_normal)
 from chalicelib.model_users import User
 from chalicelib.api_openai import openai_api_with_defaults
-from chalicelib.api_currency_exchange import crypto, usdcop, usdveb, veb_cop
+from chalicelib.api_currency_exchange import (
+    crypto, usdcop, usdveb, veb_cop, usdveb_full, usdveb_monitor)
 from chalicelib.request_processing import request_processing
 
 
@@ -140,16 +142,40 @@ def endpoint_usdcop(debug: int):
     return usdcop(debug == 1)
 
 
-@api.get("/usdvef")
-def endpoint_usdvef_plain():
-    log_endpoint_debug('/usdvef')
+@api.get("/usdveb")
+def endpoint_usdveb_plain():
+    log_endpoint_debug('/usdveb')
     return usdveb(False)
 
 
-@api.get("/usdvef/{debug}")
-def endpoint_usdvef(debug: int):
-    log_endpoint_debug(f'/usdvef/{debug}')
+@api.get("/usdveb/{debug}")
+def endpoint_usdveb(debug: int):
+    log_endpoint_debug(f'/usdveb/{debug}')
     return usdveb(debug == 1)
+
+
+@api.get("/usdveb_full")
+def endpoint_usdveb_full_plain():
+    log_endpoint_debug('/usdveb_full')
+    return usdveb_full(False)
+
+
+@api.get("/usdveb_full/{debug}")
+def endpoint_usdveb_full(debug: int):
+    log_endpoint_debug(f'/usdveb_full/{debug}')
+    return usdveb_full(str(debug) == "1")
+
+
+@api.get("/usdveb_monitor")
+def endpoint_usdveb_monitor_plain():
+    log_endpoint_debug('/usdveb_monitor')
+    return usdveb_monitor(False)
+
+
+@api.get("/usdveb_monitor/{debug}")
+def endpoint_usdveb_monitor(debug: int):
+    log_endpoint_debug(f'/usdveb_monitor/{debug}')
+    return usdveb_monitor(str(debug) == "1")
 
 
 @api.get("/copveb")

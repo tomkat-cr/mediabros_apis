@@ -1,5 +1,9 @@
-import cgi
-from io import BytesIO
+# app.py
+# Chalice implementation for project: mediabros_apis
+# 2023-02-04 | CR
+#
+import email
+
 import logging
 from typing import Union
 from urllib.request import urlopen
@@ -10,7 +14,6 @@ import http.client
 
 from chalice import Chalice, Response
 import boto3
-# from boto3.dynamodb.conditions import Key
 from jose import jwt
 from fastapi import HTTPException
 
@@ -24,7 +27,8 @@ from chalicelib.utility_date import get_formatted_date
 from chalicelib.utility_general import log_endpoint_debug, \
     log_debug, log_normal
 from chalicelib.api_openai import openai_api_with_defaults
-from chalicelib.api_currency_exchange import crypto, usdcop, usdveb, veb_cop
+from chalicelib.api_currency_exchange import (
+    crypto, usdcop, usdveb, veb_cop, usdveb_full, usdveb_monitor)
 
 
 logging.basicConfig(
@@ -42,7 +46,7 @@ log_normal(f'Mediabros APIs started [AWS Lambda]. {get_formatted_date()}')
 
 
 def error_msg_formatter(e, error_code):
-    return 'ERROR: '+str(e) + ' ['+error_code+']'
+    return 'ERROR: ' + str(e) + ' ['+error_code+']'
 
 
 def jsonify(*args, **kwargs):
@@ -54,25 +58,62 @@ def jsonify(*args, **kwargs):
     Reference:
     https://stackoverflow.com/questions/7907596/json-dumps-vs-flask-jsonify
     """
-    return app.response_class(
-        json.dumps(
+    headers = kwargs.pop('headers', {})
+    if 'Content-Type' not in headers:
+        headers['Content-Type'] = 'application/json'
+
+    # Extract status_code if passed, default to 200
+    status_code = kwargs.pop('status_code', 200)
+
+    return Response(
+        body=json.dumps(
             dict(*args, **kwargs),
             indent=None if app.current_request.is_xhr else 2
         ),
-        mimetype='application/json'
+        headers=headers,
+        status_code=status_code
     )
 
 
 def _get_parts():
-    """This allows to get the form's input fields
-    for a multipart/form_data.
+    """Get the form's input fields for multipart/form-data.
     Reference: https://github.com/aws/chalice/issues/796
     """
-    rfile = BytesIO(app.current_request.raw_body)
-    content_type = app.current_request.headers['content-type']
-    _, parameters = cgi.parse_header(content_type)
-    parameters['boundary'] = parameters['boundary'].encode('utf-8')
-    parsed = cgi.parse_multipart(rfile, parameters)
+    content_type = app.current_request.headers.get('content-type', '')
+    if not content_type.startswith('multipart/form-data'):
+        return {}
+
+    boundary_array = content_type.split('boundary=')
+    if len(boundary_array) != 2:
+        raise Exception('No boundary found in content-type header [1]')
+
+    boundary = boundary_array[1]
+    if not boundary:
+        raise Exception('No boundary found in content-type header [2]')
+
+    body = app.current_request.raw_body
+    if not isinstance(body, bytes):
+        if isinstance(body, str):
+            body = body.encode('utf-8')  # Convert string to bytes
+        else:
+            raise TypeError("raw_body must be bytes or string")
+
+    data = email.parser.BytesParser().parsebytes(body)
+
+    # Get the email message from the raw body separating the boundaries
+    # Reference: https://docs.python.org/3/library/email.parser.html
+
+    parsed = {}
+    for part in data.walk():
+        if part.get_content_maintype() == 'multipart':
+            continue
+        name = part.get_param('name', header='content-disposition')
+        if name:
+            payload = part.get_payload(decode=True)
+            if name in parsed:
+                parsed[name].append(payload)
+            else:
+                parsed[name] = [payload]
     return parsed
 
 
@@ -101,13 +142,18 @@ def http_response(status_code, detail, headers):
     HTTPResponse with status different than 200, without
     a 'raise' and therefore a HTTP error 500...
     """
+    # Ensure headers is a dict
+    final_headers = headers.copy() if headers is not None else {}
+    if 'Content-Type' not in final_headers:
+        final_headers['Content-Type'] = 'application/json'
+
     return Response(
         body={
-            "code": status_code,
-            "detail": detail,
+            'code': status_code,
+            'detail': detail
         },
-        status_code=status_code,
-        headers=headers
+        headers=final_headers,
+        status_code=status_code
     )
 
 
@@ -121,9 +167,7 @@ class AuthError(Exception):
 
 
 def handle_auth_error(ex):
-    response = jsonify(ex.error)
-    response.status_code = ex.status_code
-    return response
+    return jsonify(ex.error, status_code=ex.status_code)
 
 
 def get_token_auth_header():
@@ -168,8 +212,18 @@ def requires_auth(f):
         return f(*args, **kwargs)
 
     def jwt_decorated(*args, **kwargs):
-        token = get_token_auth_header()
-        jwt_response = get_current_active_user_chalice(token)
+        try:
+            token = get_token_auth_header()
+            log_debug(f'>> requires_auth.jwt_decorated | token: {token}')
+            jwt_response = get_current_active_user_chalice(token)
+            log_debug('>> requires_auth.jwt_decorated | jwt_response:' +
+                      f' {jwt_response}')
+        except Exception as e:
+            return http_response(
+                e.status_code or 500,
+                error_msg_formatter(e, 'JWT_AUTH_ERROR'),
+                {'Content-Type': 'application/json'}
+            )
         if isinstance(jwt_response, HTTPException):
             return http_response(
                 jwt_response.status_code,
@@ -178,17 +232,37 @@ def requires_auth(f):
             )
         if isinstance(jwt_response, Exception):
             raise jwt_response
+        app.current_request.context.update({'user': jwt_response.model_dump()})
         return f(*args, **kwargs)
 
     def auth_decorated(*args, **kwargs):
-        token = get_token_auth_header()
-        jsonurl = urlopen(
-            "https://"+env.get("AUTH0_DOMAIN")+"/.well-known/jwks.json"
-        )
-        jwks = json.loads(jsonurl.read())
+        try:
+            token = get_token_auth_header()
+            log_debug(f'get_token_auth_header | token: {token}')
+        except Exception as e:
+            return http_response(
+                e.status_code or 500,
+                error_msg_formatter(e, 'JWT_AUTH_ERROR'),
+                {'Content-Type': 'application/json'}
+            )
+        url = "https://"+env.get("AUTH0_DOMAIN")+"/.well-known/jwks.json"
+        log_debug(f'auth_decorated | url: {url}')
+        try:
+            jsonurl = urlopen(url)
+            log_debug(f'auth_decorated | jsonurl: {jsonurl}')
+        except Exception as e:
+            raise AuthError({"code": "invalid_claims",
+                             "description": "Unable to fetch JWKS"
+                             " (" + str(e) + ")"}, 401)
+        try:
+            jwks = json.loads(jsonurl.read())
+            log_debug(f'auth_decorated | jwks: {jwks}')
+        except Exception as e:
+            raise AuthError({"code": "invalid_claims",
+                             "description": "Unable to parse JWKS"
+                             " (" + str(e) + ")"}, 401)
         unverified_header = jwt.get_unverified_header(token)
-        log_debug('jwks', jwks)
-        log_debug('unverified_header', unverified_header)
+        log_debug(f'auth_decorated | unverified_header: {unverified_header}')
         rsa_key = {}
         for key in jwks["keys"]:
             if key["kid"] == unverified_header.get("kid"):
@@ -200,6 +274,7 @@ def requires_auth(f):
                     "e": key["e"]
                 }
         if rsa_key:
+            log_debug(f'auth_decorated | rsa_key: {rsa_key}')
             try:
                 payload = jwt.decode(
                     token,
@@ -208,6 +283,7 @@ def requires_auth(f):
                     audience=env.get("AUTH0_API_AUDIENCE"),
                     issuer="https://"+env.get("AUTH0_DOMAIN")+"/"
                 )
+                log_debug(f'auth_decorated | payload: {payload}')
             except jwt.ExpiredSignatureError:
                 raise AuthError({"code": "token_expired",
                                  "description": "token is expired"}, 401)
@@ -222,7 +298,7 @@ def requires_auth(f):
                                  "Unable to parse authentication"
                                  " token: " + str(e)}, 401)
 
-            app.current_request.context.update(payload)
+            app.current_request.context.update({'current_user': payload})
             return f(*args, **kwargs)
         raise AuthError({"code": "invalid_header",
                          "description": "Unable to find appropriate key"}, 401)
@@ -300,16 +376,16 @@ class UserData(BaseModel):
            content_types=['multipart/form-data'])
 def login_for_access_token_endpoint():
     log_endpoint_debug('/token')
-    log_debug('antes de tomar form_data!')
+    log_debug('login_for_access_token_endpoint | Before get form_data!')
     form_data = get_multipart_form_data()
-    log_debug(f'form_data: {form_data}')
+    log_debug(f'login_for_access_token_endpoint | form_data: {form_data}')
     user_data = UserData(
         username=form_data.get('username'),
         password=form_data.get('password'),
     )
     try:
         login_data = login_for_access_token(user_data)
-    except HTTPException as err: 
+    except HTTPException as err:
         return http_response(
             err.status_code,
             err.detail,
@@ -332,7 +408,7 @@ def login_for_access_token_endpoint():
 def pget():
     log_endpoint_debug('/pget')
     query_params = get_query_params()
-    log_debug(f'query_params: {query_params}')
+    log_debug(f'pget | query_params: {query_params}')
     password = query_params['p']
     return dict(
         {
@@ -424,19 +500,43 @@ def endpoint_usdcop_plain():
 @app.route("/usdcop/{debug}", methods=['GET'])
 def endpoint_usdcop(debug: int):
     log_endpoint_debug(f'/usdcop/{debug}')
-    return usdcop(debug == "1")
+    return usdcop(str(debug) == "1")
 
 
-@app.route("/usdvef", methods=['GET'])
-def endpoint_usdvef_plain():
-    log_endpoint_debug('/usdvef')
+@app.route("/usdveb", methods=['GET'])
+def endpoint_usdveb_plain():
+    log_endpoint_debug('/usdveb')
     return usdveb(False)
 
 
-@app.route("/usdvef/{debug}", methods=['GET'])
-def endpoint_usdvef(debug: int):
-    log_endpoint_debug(f'/usdvef/{debug}')
-    return usdveb(debug == "1")
+@app.route("/usdveb/{debug}", methods=['GET'])
+def endpoint_usdveb(debug: int):
+    log_endpoint_debug(f'/usdveb/{debug}')
+    return usdveb(str(debug) == "1")
+
+
+@app.route("/usdveb_full", methods=['GET'])
+def endpoint_usdveb_full_plain():
+    log_endpoint_debug('/usdveb_full')
+    return usdveb_full(False)
+
+
+@app.route("/usdveb_full/{debug}", methods=['GET'])
+def endpoint_usdveb_full(debug: int):
+    log_endpoint_debug(f'/usdveb_full/{debug}')
+    return usdveb_full(str(debug) == "1")
+
+
+@app.route("/usdveb_monitor", methods=['GET'])
+def endpoint_usdveb_monitor_plain():
+    log_endpoint_debug('/usdveb_monitor')
+    return usdveb_monitor(False)
+
+
+@app.route("/usdveb_monitor/{debug}", methods=['GET'])
+def endpoint_usdveb_monitor(debug: int):
+    log_endpoint_debug(f'/usdveb_monitor/{debug}')
+    return usdveb_monitor(str(debug) == "1")
 
 
 @app.route("/copveb", methods=['GET'])
@@ -448,7 +548,7 @@ def endpoint_copveb_plain():
 @app.route("/copveb/{debug}")
 def endpoint_copveb(debug: int):
     log_endpoint_debug(f'/copveb/{debug}')
-    return veb_cop('copveb', debug == "1")
+    return veb_cop('copveb', str(debug) == "1")
 
 
 @app.route("/vebcop", methods=['GET'])
@@ -460,7 +560,7 @@ def endpoint_vebcop_plain():
 @app.route("/vebcop/{debug}", methods=['GET'])
 def endpoint_vebcop(debug: int):
     log_endpoint_debug(f'/vebcop/{debug}')
-    return veb_cop('vebcop', debug == "1")
+    return veb_cop('vebcop', str(debug) == "1")
 
 
 @app.route("/btc", methods=['GET'])
@@ -472,7 +572,7 @@ def endpoint_btc_plain():
 @app.route("/btc/{debug}", methods=['GET'])
 def endpoint_btc(debug: int):
     log_endpoint_debug(f'/btc/{debug}')
-    return crypto('btc', 'usd', debug == "1")
+    return crypto('btc', 'usd', str(debug) == "1")
 
 
 @app.route("/eth", methods=['GET'])
@@ -484,7 +584,7 @@ def endpoint_eth_plain():
 @app.route("/eth/{debug}", methods=['GET'])
 def endpoint_eth(debug: int):
     log_endpoint_debug(f'/eth/{debug}')
-    return crypto('eth', 'usd', debug == "1")
+    return crypto('eth', 'usd', str(debug) == "1")
 
 
 @app.route("/crypto/{symbol}", methods=['GET'])
@@ -496,10 +596,10 @@ def endpoint_crypto_plain(symbol: str):
 @app.route("/crypto/{symbol}/{debug}", methods=['GET'])
 def endpoint_crypto(symbol: str, debug: int):
     log_endpoint_debug(f'/crypto/{symbol}/{debug}')
-    return crypto(symbol, 'usd', debug == "1")
+    return crypto(symbol, 'usd', str(debug) == "1")
 
 
 @app.route("/crypto_wc/{symbol}/{currency}/{debug}")
 def endpoint_crypto_curr(symbol: str, currency: str, debug: int):
-    log_endpoint_debug(f'/crypto/{symbol}/{currency}/{debug}')
-    return crypto(symbol, currency, debug == "1")
+    log_endpoint_debug(f'/crypto_wc/{symbol}/{currency}/{debug}')
+    return crypto(symbol, currency, str(debug) == "1")
