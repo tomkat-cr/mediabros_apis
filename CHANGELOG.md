@@ -54,6 +54,7 @@ Fix: convert debug param to string before comparison in endpoint handlers
 
 ### Breaks
 The /usdveb command does not include the DolarToday data and API call because it was deprecated.
+Remove passlib dependency.
 
 
 ## 1.0.0 (2025-05-14)

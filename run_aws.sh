@@ -29,11 +29,12 @@ if [ "$PORT" = "" ]; then
 fi
 
 if [ "$PYTHON_VERSION" = "" ]; then
-    echo "Error: PYTHON_VERSION is not set" && exit 1
+    echo "Error: PYTHON_VERSION is not set"
+    exit 1
 fi
 PYTHON3_EXEC="/usr/local/bin/python${PYTHON_VERSION}"
 
-export DEP_PACKAGES="requests openai 'python-jose[cryptography]' 'passlib[bcrypt]' wheel python-multipart python-dotenv fastapi pymongo werkzeug boto3 chalice beautifulsoup4 cloudscraper selenium"
+export DEP_PACKAGES="requests openai 'python-jose[cryptography]' wheel python-multipart python-dotenv fastapi pymongo werkzeug boto3 chalice beautifulsoup4 cloudscraper selenium"
 
 
 # ..........
@@ -55,6 +56,8 @@ deploy_with_sls() {
 
     run_requirements_txt
 
+    add_github_api_key_to_monitor_exchange_rates ${BASE_DIR}/requirements.txt
+
     cd ${BASE_DIR}
     pwd
 
@@ -65,7 +68,9 @@ deploy_with_sls() {
         echo ""
         if ! npm install -g serverless
         then
-            echo "Error installing serverless" && exit 1
+            echo "Error installing serverless"
+            run_remove_pat_from_files
+            exit 1
         fi
     fi
 
@@ -113,7 +118,7 @@ deploy_with_sls() {
         if [ "${any_key}" = "a" ]; then
             echo "Aborting..."
             run_remove_pat_from_files
-            exit
+            exit 1
         fi
     fi
 
@@ -138,7 +143,9 @@ deploy_with_sls() {
 
     if ! AWS_PROFILE=${AWS_PROFILE:-default} aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
     then
-        echo "Error: Failed to authenticate to AWS ECR. Check your AWS credentials and permissions." && exit 1
+        echo "Error: Failed to authenticate to AWS ECR. Check your AWS credentials and permissions."
+        run_remove_pat_from_files
+        exit 1
     fi
 
     echo ""
@@ -147,7 +154,9 @@ deploy_with_sls() {
 
     if ! sls --app mediabros-apis ${SLS_PARAMETERS}
     then
-        echo "Error creating mediabros_apis" && exit 1
+        echo "Error creating mediabros_apis"
+        run_remove_pat_from_files
+        exit 1
     fi
 
     echo ""
@@ -160,7 +169,9 @@ deploy_with_sls() {
         echo ""
         if ! sls remove --app mediabros-apis --stage ${stage}
         then
-            echo "Error removing previous mediabros_apis" && exit 1
+            echo "Error removing previous mediabros_apis"
+            run_remove_pat_from_files
+            exit 1
         fi
         echo ""
         echo "Waiting for the previous mediabros_apis to be removed..."
@@ -170,7 +181,9 @@ deploy_with_sls() {
 
     if ! sls deploy --app mediabros-apis --stage ${stage} --debug
     then
-        echo "Error deploying mediabros_apis" && exit 1
+        echo "Error deploying mediabros_apis"
+        run_remove_pat_from_files
+        exit 1
     fi
 
     run_remove_pat_from_files
@@ -205,7 +218,8 @@ deploy_with_sls() {
     fi
 
     if [ "${API_URL}" = "" ]; then
-        echo "Error getting API Gateway URL" && exit 1
+        echo "Error getting API Gateway URL"
+        exit 1
     fi
     
     echo "API URL: ${API_URL}"
@@ -218,6 +232,7 @@ deploy_with_sls() {
     if ! curl -v "${API_URL}"
     then
         echo "Error testing the API Gateway"
+        run_remove_pat_from_files
         exit 1
     fi
     
@@ -226,6 +241,8 @@ deploy_with_sls() {
     echo ""
 
     echo "API URL: ${API_URL}"
+
+    run_remove_pat_from_files
 
     cd ${BASE_DIR}
 }
@@ -239,6 +256,7 @@ deploy_with_chalice() {
     # restore_github_pat ${BASE_DIR}/Pipfile.lock
     # pipenv install
     run_requirements_txt
+    add_github_api_key_to_monitor_exchange_rates ${BASE_DIR}/requirements.txt
     pipenv run chalice deploy --stage ${stage}
     run_remove_pat_from_files
     # mask_github_pat ${BASE_DIR}/requirements.txt
@@ -281,11 +299,13 @@ download_chromedriver() {
     cd ./vendor
     if ! wget "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip"
     then
-        echo "Error downloading chromedriver" && exit 1
+        echo "Error downloading chromedriver"
+        exit 1
     fi
     if ! wget "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chrome-linux64.zip"
     then
-        echo "Error downloading chrome" && exit 1
+        echo "Error downloading chrome"
+        exit 1
     fi
     unzip chromedriver-linux64.zip
     unzip chrome-linux64.zip
@@ -373,14 +393,15 @@ install_3rd_party_pakages() {
     echo "Installing bcv-exchange-rates from git branch: ${BCV_EXCHANGE_RATES_BRANCH}"
     echo "Installing cop-exchange-rates from git branch: ${COP_EXCHANGE_RATES_BRANCH}"
 
-    #    git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
+    # git+https://${GITHUB_API_KEY}@github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
     if ! pipenv install \
         git+https://github.com/tomkat-cr/monitor-exchange-rates.git${MONITOR_EXCHANGE_RATES_BRANCH} \
         git+https://github.com/tomkat-cr/bcv-exchange-rates${BCV_EXCHANGE_RATES_BRANCH} \
         git+https://github.com/tomkat-cr/cop-exchange-rates${COP_EXCHANGE_RATES_BRANCH} \
         ${DEP_PACKAGES}
     then
-        echo "Error installing 3rd party packages and dependencies" && exit 1
+        echo "Error installing 3rd party packages and dependencies"
+        exit 1
     fi
 }
 
@@ -514,7 +535,8 @@ mask_github_pat() {
     echo "Masking Github PAT in '$file' (${envvar_name}: ${envvar_value})..."
     echo ""
     # perl -i -pe "s|github_pat_[^@]*|\\$\{GITHUB_API_KEY}|g" $1
-    perl -i -pe "s|${string_to_replace}[^@]*|\\$\{${envvar_name}}|g" $file
+    # perl -i -pe "s|${string_to_replace}[^@]*|\\$\{${envvar_name}}|g" $file
+    perl -i -pe "s|${string_to_replace}|\\$\{${envvar_name}}|g" $file
 }
 
 restore_github_pat() {
@@ -528,7 +550,21 @@ restore_github_pat() {
     echo "Restoring Github PAT in '$file' (${envvar_name}: ${envvar_value})..."
     echo ""
     # perl -i -pe "s|\\$\{GITHUB_API_KEY}[^@]*|${GITHUB_API_KEY}|g" $1
-    perl -i -pe "s|\\$\{${envvar_name}}[^@]*|${envvar_value}|g" $file
+    # perl -i -pe "s|\\$\{${envvar_name}}[^@]*|${envvar_value}|g" $file
+    perl -i -pe "s|\\$\{${envvar_name}}|${envvar_value}|g" $file
+}
+
+add_github_api_key_to_monitor_exchange_rates() {
+    local file="$1"
+    local original_string="git\+https\:\/\/github.com\/tomkat-cr\/monitor-exchange-rates\.git"
+    local replacement_string="git+https://${GITHUB_API_KEY}\@github.com/tomkat-cr/monitor-exchange-rates.git"
+    echo ""
+    echo "Adding Github PAT to '$file'..."
+    echo ""
+    echo "Original string: ${original_string}"
+    echo "Replacement string: ${replacement_string}"
+    echo ""
+    perl -i -pe "s|${original_string}|${replacement_string}|g" $file
 }
 
 run_requirements_txt() {
