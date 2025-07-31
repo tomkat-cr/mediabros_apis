@@ -611,7 +611,6 @@ run_pipfile() {
     #     requests \
     #     openai \
     #     'python-jose[cryptography]' \
-    #     'passlib[bcrypt]' \
     #     wheel \
     #     python-multipart \
     #     python-dotenv

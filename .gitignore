@@ -143,12 +143,14 @@ chalicelib/src
 .chalice/venv/
 .chalice/deployed/
 
-# Editor
-.vscode
-
+# Chalice
 config.json
 Pipfile.lock
 vendor
 build
 .serverless
 .cache
+
+# IDEs
+.idea
+.vscode
