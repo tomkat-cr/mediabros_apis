@@ -44,7 +44,6 @@ if [[ "$1" != "deactivate" && "$1" != "pipfile" && "$1" != "clean" ]]; then
             pymongo \
             werkzeug \
             "python-jose[cryptography]" \
-            "passlib[bcrypt]" \
             wheel \
             python-multipart \
             python-dotenv

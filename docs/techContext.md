@@ -35,7 +35,7 @@
 
 -   **Python Packages (`Pipfile`):**
     -   **Web & API:** `chalice`, `fastapi`, `requests`, `boto3`, `python-multipart`.
-    -   **Authentication:** `python-jose[cryptography]` (for JWTs), `passlib[bcrypt]` (for hashing).
+    -   **Authentication:** `python-jose[cryptography]` (for JWTs), `Werkzeug` (for password encryption).
     -   **Data:** `pymongo`, `beautifulsoup4`, `cloudscraper`, `selenium`.
     -   **Utilities:** `python-dotenv`, `wheel`.
     -   **Custom Libraries:** The project depends on several custom libraries hosted on GitHub for fetching exchange rates (`monitor-exchange-rates`, `bcv-exchange-rates`, `cop-exchange-rates`).

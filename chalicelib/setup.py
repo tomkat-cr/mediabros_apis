@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="mediabros_apis",
-    version="1.1.0",
+    version="1.1.1",
     author="Carlos J. Ramirez",
     author_email="cramirez@mediabros.com",
     description="Mediabros APIs for currency and crypto exchange, " +
@@ -15,7 +15,6 @@ setup(
         "openai",
         'werkzeug',
         '"python-jose[cryptography]"',
-        '"passlib[bcrypt]"',
         'wheel',
         'python-multipart',
     ],
